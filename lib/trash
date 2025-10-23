@@ -1,0 +1,25 @@
+final ApiService _apiService = ApiService();
+
+  Future<void> _handleLogin() async {
+    final email = _idController.text.trim();
+    final password = _passwordController.text.trim();
+
+    final result = await _apiService.login(email, password);
+
+    if (result['status'] == 'success') {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Login successful!')));
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => MyHomePage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Login failed')),
+      );
+    }
+  }
+
+  
