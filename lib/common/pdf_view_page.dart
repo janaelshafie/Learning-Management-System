@@ -3,7 +3,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class PdfViewPage extends StatelessWidget {
   final String pdfAsset;
-  PdfViewPage(this.pdfAsset);
+  const PdfViewPage(this.pdfAsset, {super.key});
 
   @override
   Widget build(BuildContext context) {

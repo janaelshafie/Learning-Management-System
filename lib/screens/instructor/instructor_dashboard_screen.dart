@@ -6,7 +6,6 @@ import 'package:excel/excel.dart';
 import '../../common/app_state.dart';
 import '../home/my_home_page.dart';
 import '../student/student_dashboard_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
 import '../auth/university_login_page.dart';
 
 class InstructorScreen extends StatefulWidget {
@@ -35,20 +34,7 @@ class _InstructorScreenState extends State<InstructorScreen> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
-    final List<Map<String, dynamic>> courses = [
-      {'title': 'Agile Software', 'image': 'assets/Ai.jpg', 'rating': 4.7},
-      {
-        'title': 'Software Engineering',
-        'image': 'assets/Cybersecurity.jpg',
-        'rating': 4.4,
-      },
-      {'title': 'CS101', 'image': 'assets/Parallel.jpg', 'rating': 4.2},
-      {
-        'title': 'Software Testing',
-        'image': 'assets/DataScience.jpg',
-        'rating': 4.6,
-      },
-    ];
+    final List<Map<String, dynamic>> courses = [];
 
     final primaryColor =
         isDark ? Colors.deepPurple.shade700 : Colors.blue.shade700;
@@ -260,13 +246,6 @@ class _InstructorScreenState extends State<InstructorScreen> {
                                             );
                                           }
                                         },
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Upload Grades Excel',
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
                                         style: ElevatedButton.styleFrom(
                                           minimumSize: Size(
                                             double.infinity,
@@ -276,6 +255,13 @@ class _InstructorScreenState extends State<InstructorScreen> {
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
+                                          ),
+                                        ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            'Upload Grades Excel',
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ),
@@ -406,7 +392,7 @@ class _InstructorScreenState extends State<InstructorScreen> {
               if (isStudent) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => DashboardScreen()),
+                  MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
                 );
               } else if (isInstructor) {
                 Navigator.pushReplacement(
@@ -414,9 +400,9 @@ class _InstructorScreenState extends State<InstructorScreen> {
                   MaterialPageRoute(builder: (_) => InstructorScreen()),
                 );
               } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => AdminScreen()),
+                // Admin users should go to admin dashboard
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Admin users should login through the login page')),
                 );
               }
               break;

@@ -4,9 +4,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 // Imports for the new structure
 import '../../common/pdf_view_page.dart';     // For PdfViewPage
 import '../../common/app_state.dart';       // For global state variables
-import '../student/student_dashboard_screen.dart'; // For DashboardScreen
+import '../student/student_dashboard_screen.dart'; // For StudentDashboardScreen
 import '../instructor/instructor_dashboard_screen.dart'; // For InstructorScreen
-import '../admin/admin_dashboard_screen.dart';   // For AdminScreen
 import '../auth/university_login_page.dart';  // For UniversityLoginPage
 
 // Note: The PdfViewPage class is no longer here.
@@ -132,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
           SliverToBoxAdapter(
-            child: Container(
+            child: SizedBox(
               height: 0.15 * screenSize.height,
               child: Row(
                 children: [
@@ -293,7 +292,7 @@ class _MyHomePageState extends State<MyHomePage> {
               if (isStudent) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => DashboardScreen()),
+                  MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
                 );
               } else if (isInstructor) {
                 Navigator.pushReplacement(
@@ -301,9 +300,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute(builder: (_) => InstructorScreen()),
                 );
               } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => AdminScreen()),
+                // Admin users should go to admin dashboard
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Admin users should login through the login page')),
                 );
               }
               break;

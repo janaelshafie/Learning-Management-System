@@ -1,32 +1,434 @@
 import 'package:flutter/material.dart';
-
-// Imports for the new structure
-import '../../common/app_state.dart';
-import '../home/my_home_page.dart';
-import '../instructor/instructor_dashboard_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
+import '../../services/api_services.dart';
 import '../auth/university_login_page.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+class StudentDashboardScreen extends StatefulWidget {
+  final String? userEmail;
+  
+  const StudentDashboardScreen({super.key, this.userEmail});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  bool isDark = false;
-  int _selectedIndex = 1;
-  Widget buildCard({
-    required Color color,
-    required String value,
-    required String label,
-    required double progress,
-    required String progressText,
-  }) {
+class _StudentDashboardScreenState extends State<StudentDashboardScreen> with TickerProviderStateMixin {
+  final ApiService _apiService = ApiService();
+  late TabController _tabController;
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+  int _selectedIndex = 0;
+  bool _isSidebarExpanded = true;
+  List<dynamic> _pendingProfileChanges = [];
+
+  // Real data from database
+  double _cumulativeGPA = 0.0;
+  int _completedCredits = 0;
+  int _totalCredits = 170; // Total credits needed for graduation
+  String _departmentName = '';
+
+  // Sample courses data
+  List<Map<String, dynamic>> _courses = [];
+  
+  // Announcements data
+  List<dynamic> _announcements = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get user data from backend using the logged-in user's email
+      if (widget.userEmail != null) {
+        final userResponse = await _apiService.getUserByEmail(widget.userEmail!);
+        if (userResponse['status'] == 'success') {
+          setState(() {
+            _userData = userResponse['data'];
+          });
+        } else {
+          // Fallback to mock data if API fails
+          setState(() {
+            _userData = {
+              'userId': 301,
+              'name': 'Student Ali Ahmed',
+              'email': 'student.ali@mail.com',
+              'officialMail': 'ali.ahmed@student.uni.edu',
+              'phone': '123-456-7890',
+              'location': 'Cairo, Egypt',
+              'role': 'student',
+              'nationalId': '300000301',
+              'accountStatus': 'active',
+            };
+          });
+        }
+      } else {
+        // Fallback to mock data if no email provided
+        setState(() {
+          _userData = {
+            'userId': 301,
+            'name': 'Student Ali Ahmed',
+            'email': 'student.ali@mail.com',
+            'officialMail': 'ali.ahmed@student.uni.edu',
+            'phone': '123-456-7890',
+            'location': 'Cairo, Egypt',
+            'role': 'student',
+            'nationalId': '300000301',
+            'accountStatus': 'active',
+          };
+        });
+      }
+
+      // Load student course data from database
+      if (_userData != null) {
+        final studentDataResponse = await _apiService.getStudentData(_userData!['userId']);
+        if (studentDataResponse['status'] == 'success') {
+          final studentData = studentDataResponse['data'];
+          setState(() {
+            _courses = List<Map<String, dynamic>>.from(studentData['courses'] ?? []);
+            _cumulativeGPA = (studentData['cumulativeGPA'] ?? 0.0).toDouble();
+            _completedCredits = studentData['completedCredits'] ?? 0;
+            _departmentName = studentData['departmentName'] ?? 'No Department';
+          });
+        } else {
+          // Fallback to mock data if API fails
+          _loadMockCourseData();
+        }
+        
+        // Load pending profile changes
+        _pendingProfileChanges = await _apiService.getPendingProfileChangesForUser(_userData!['userId']);
+        
+        // Load announcements for students
+        _announcements = await _apiService.getAnnouncementsForUserType('students_only');
+      } else {
+        // Fallback to mock data if no user data
+        _loadMockCourseData();
+      }
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _loadMockCourseData() {
+    setState(() {
+      _courses = [
+        {'code': 'CSE112', 'name': 'Introduction to Programming', 'credits': 3, 'grade': 'A', 'semester': 'Fall 2024'},
+        {'code': 'MATH101', 'name': 'Calculus I', 'credits': 3, 'grade': 'B+', 'semester': 'Fall 2024'},
+        {'code': 'PHYS101', 'name': 'Physics I', 'credits': 3, 'grade': 'A-', 'semester': 'Fall 2024'},
+        {'code': 'ENG101', 'name': 'English Composition', 'credits': 2, 'grade': 'A', 'semester': 'Fall 2024'},
+        {'code': 'CSE221', 'name': 'Data Structures', 'credits': 3, 'grade': 'B', 'semester': 'Spring 2024'},
+        {'code': 'MATH102', 'name': 'Calculus II', 'credits': 3, 'grade': 'B+', 'semester': 'Spring 2024'},
+      ];
+      
+      // Calculate GPA and credits from mock courses
+      double totalPoints = 0.0;
+      int totalCredits = 0;
+      
+      for (var course in _courses) {
+        int credits = course['credits'] as int;
+        String grade = course['grade'] as String;
+        
+        totalCredits += credits;
+        totalPoints += credits * _getGradePoints(grade);
+      }
+      
+      if (totalCredits > 0) {
+        _cumulativeGPA = totalPoints / totalCredits;
+        _completedCredits = totalCredits;
+      }
+    });
+  }
+
+  double _getGradePoints(String grade) {
+    switch (grade) {
+      case 'A+': return 4.0;
+      case 'A': return 4.0;
+      case 'A-': return 3.7;
+      case 'B+': return 3.3;
+      case 'B': return 3.0;
+      case 'B-': return 2.7;
+      case 'C+': return 2.3;
+      case 'C': return 2.0;
+      case 'C-': return 1.7;
+      case 'D+': return 1.3;
+      case 'D': return 1.0;
+      case 'F': return 0.0;
+      default: return 0.0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Row(
+              children: [
+                // Sidebar
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: _isSidebarExpanded ? 280 : 60,
+                  child: _buildSidebar(),
+                ),
+                // Main Content
+                Expanded(
+                  child: _buildMainContent(),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildSidebar() {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      padding: EdgeInsets.all(16),
+      color: const Color(0xFF1E3A8A), // Dark blue
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          // Toggle Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _isSidebarExpanded = !_isSidebarExpanded;
+                  });
+                },
+                icon: Icon(
+                  _isSidebarExpanded ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          // Profile Section
+          if (_isSidebarExpanded) ...[
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: const Icon(
+                Icons.person,
+                size: 50,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _userData?['name']?.toString() ?? 'Student Name',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+          ] else ...[
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: const Icon(
+                Icons.person,
+                size: 20,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+          // Navigation Items
+          _buildNavItem(0, 'Dashboard', Icons.dashboard, true),
+          _buildNavItem(1, 'Profile', Icons.person, false),
+          _buildNavItem(2, 'Courses', Icons.book, false),
+          _buildNavItem(3, 'Services', Icons.settings, false),
+          const Spacer(),
+          // Logout Button
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const UniversityLoginPage()),
+                    (route) => false,
+                  );
+                },
+                icon: const Icon(Icons.logout),
+                label: _isSidebarExpanded ? const Text('Logout') : const SizedBox(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, String title, IconData icon, bool isActive) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.white.withOpacity(0.2) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.white),
+        title: _isSidebarExpanded ? Text(
+          title,
+          style: const TextStyle(color: Colors.white),
+        ) : null,
+        onTap: () {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildMainContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboard();
+      case 1:
+        return _buildProfile();
+      case 2:
+        return _buildCourses();
+      case 3:
+        return _buildServices();
+      default:
+        return _buildDashboard();
+    }
+  }
+
+  Widget _buildDashboard() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              const Icon(Icons.dashboard, size: 24, color: Color(0xFF1E3A8A)),
+              const SizedBox(width: 8),
+              const Text(
+                'Dashboard',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Welcome to the Faculty SIS System',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Department Display
+          if (_departmentName.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _getDepartmentColor(_departmentName),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                'Department: $_departmentName',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
+
+          // KPI Cards
+          Row(
+            children: [
+              Expanded(child: _buildKPICard('CUMULATIVE GPA', '${_cumulativeGPA.toStringAsFixed(2)}', _cumulativeGPA / 4.0, '4.0', Colors.orange)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildKPICard('CREDIT HOURS', '$_completedCredits', _completedCredits / _totalCredits, '$_totalCredits', Colors.green)),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Announcements Section
+          if (_announcements.isNotEmpty) ...[
+            const Text(
+              'Announcements',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...(_announcements.map((announcement) => _buildAnnouncementCard(announcement)).toList()),
+            const SizedBox(height: 32),
+          ],
+
+          // Quick Access Cards
+          const Text(
+            'Quick Access',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.5,
+            children: [
+              _buildQuickAccessCard('My Courses', Icons.book, () => setState(() => _selectedIndex = 2)),
+              _buildQuickAccessCard('My Services', Icons.settings, () => setState(() => _selectedIndex = 3)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKPICard(String label, String value, double progress, String maxValue, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(12),
@@ -38,23 +440,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 32,
-                  color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 label,
-                style: TextStyle(color: Colors.white70, fontSize: 18),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.white24,
-                color: Colors.white,
-                minHeight: 5,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                minHeight: 6,
               ),
             ],
           ),
@@ -62,14 +467,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             right: 0,
             top: 0,
             child: CircleAvatar(
-              backgroundColor: Colors.blueGrey,
+              backgroundColor: Colors.white.withOpacity(0.2),
               radius: 20,
               child: Text(
-                progressText,
-                style: TextStyle(
+                maxValue,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -79,171 +484,416 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor =
-        isDark ? Colors.deepPurple.shade700 : Colors.blue.shade700;
-    final Cardscolor = isDark ? Colors.orange : Colors.indigo;
-    final backgroundColor = isDark ? Colors.black : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final screenSize = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Color(0xFFF5F6FA),
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildQuickAccessCard(String title, IconData icon, VoidCallback onTap) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
           children: [
+              Icon(icon, size: 32, color: const Color(0xFF1E3A8A)),
+              const SizedBox(height: 8),
             Text(
-              'Dashboard',
-              style: TextStyle(color: textColor, fontSize: 24),
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Welcome to the Faculty SIS System',
-              style: TextStyle(color: textColor, fontSize: 14),
-              overflow: TextOverflow.ellipsis,
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.sunny : Icons.brightness_2,
-              color: textColor,
-            ),
-            onPressed: () {
-              setState(() {
-                isDark = !isDark;
-              });
-            },
-            tooltip: isDark ? 'Light Mode' : 'Dark Mode',
-          ),
-        ],
-        iconTheme: IconThemeData(color: Colors.black87),
+        ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
+    );
+  }
+
+  Widget _buildProfile() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
             child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                buildCard(
-                  color: Cardscolor,
-                  value: '3.01',
-                  label: 'CUMULATIVE GPA',
-                  progress: 3.01 / 4.0,
-                  progressText: '2',
+              const Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E3A8A),
                 ),
-                buildCard(
-                  color: Cardscolor,
-                  value: '6',
-                  label: 'TRAINING WEEKS',
-                  progress: 6 / 12,
-                  progressText: '12',
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showEditProfileDialog(),
+                icon: const Icon(Icons.edit),
+                label: const Text('Edit Profile'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
                 ),
-                buildCard(
-                  color: Cardscolor,
-                  value: '116',
-                  label: 'CREDIT HOURS',
-                  progress: 116 / 170,
-                  progressText: '170',
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          SliverToBoxAdapter(child: SizedBox(height: 0.1 * screenSize.height)),
-          SliverToBoxAdapter(
-            child: Container(
-              margin: EdgeInsets.all(16),
-              padding: EdgeInsets.all(24),
+          const SizedBox(height: 24),
+          
+          // Pending Changes Notification
+          if (_pendingProfileChanges.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 35,
-                        backgroundImage: AssetImage(
-                          'assets/Profile.jpg',
-                        ), // Replace with actual image URL or asset
-                      ),
-                      SizedBox(width: 16),
+                      Icon(Icons.pending_actions, color: Colors.orange[700]),
+                      const SizedBox(width: 8),
                       Text(
-                        'Mohamed al gazar',
+                        'Profile Changes Pending Approval',
                         style: TextStyle(
-                          color: textColor,
-                          fontSize: 22,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 8),
                   Text(
-                    'Current GPA',
-                    style: TextStyle(color: textColor, fontSize: 16),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    '3.01',
+                    'You have ${_pendingProfileChanges.length} profile change(s) waiting for admin approval. Changes will be applied once approved.',
                     style: TextStyle(
-                      color: textColor,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.orange[600],
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  Divider(color: textColor, height: 32),
-                  Row(
+                  const SizedBox(height: 8),
+                  ..._pendingProfileChanges.map((change) => Padding(
+                    padding: const EdgeInsets.only(left: 24, top: 4),
+                    child: Text(
+                      '• ${change['fieldName']?.toString().toUpperCase()}: "${change['oldValue']}" → "${change['newValue']}"',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  )).toList(),
+                ],
+              ),
+            ),
+          
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                    children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.1),
+                    child: const Icon(
+                      Icons.person,
+                      size: 60,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildProfileField('Full Name', _userData?['name']?.toString() ?? 'N/A'),
+                  _buildProfileField('Email', _userData?['email']?.toString() ?? 'N/A'),
+                  _buildProfileField('Official Email', _userData?['officialMail']?.toString() ?? 'N/A'),
+                  _buildProfileField('Phone', _userData?['phone']?.toString() ?? 'N/A'),
+                  _buildProfileField('Location', _userData?['location']?.toString() ?? 'N/A'),
+                  _buildProfileField('National ID', _userData?['nationalId']?.toString() ?? 'N/A'),
+                  _buildProfileField('Status', _userData?['accountStatus']?.toString().toUpperCase() ?? 'N/A'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileField(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourses() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Courses',
+                            style: TextStyle(
+              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Course Statistics
+          Row(
+            children: [
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Total Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('${_courses.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Completed Credits', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('$_completedCredits', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Current GPA', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('$_cumulativeGPA', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+          const SizedBox(height: 24),
+          // Course List
+          ..._courses.map((course) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getGradeColor(course['grade']).withOpacity(0.2),
+                child: Text(
+                  course['grade'],
+                  style: TextStyle(
+                    color: _getGradeColor(course['grade']),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              title: Text(
+                course['code'],
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(course['name']),
+                  Text('${course['credits']} Credits • ${course['semester']}'),
+                ],
+              ),
+              trailing: Text(
+                course['grade'],
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _getGradeColor(course['grade']),
+                ),
+              ),
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServices() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+          const Text(
+            'Student Services',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            elevation: 4,
+            child: Column(
+              children: [
+                TabBar(
+                  controller: _tabController,
+                  labelColor: const Color(0xFF1E3A8A),
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: const Color(0xFF1E3A8A),
+                  tabs: const [
+                    Tab(text: 'Course Registration'),
+                    Tab(text: 'Fees'),
+                  ],
+                ),
+                SizedBox(
+                  height: 400,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildCourseRegistration(),
+                      _buildFees(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseRegistration() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const Text(
+            'Course Registration',
+                            style: TextStyle(
+              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Course registration functionality will be implemented here.',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Course registration feature coming soon!')),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Register for Courses'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+                          ),
+                        ],
+                      ),
+    );
+  }
+
+  Widget _buildFees() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const Text(
+            'Fees Information',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Highest Semester',
-                            style: TextStyle(color: textColor, fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '3.39 - Spring 2025',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Worst Semester',
-                            style: TextStyle(color: textColor, fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '2.92 - Fall 2024',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                      Text('Tuition Fees'),
+                      Text('\$2,500', style: TextStyle(fontWeight: FontWeight.bold)),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Registration Fees'),
+                      Text('\$100', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('\$2,600', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Payment feature coming soon!')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Pay Now'),
+                    ),
                   ),
                 ],
               ),
@@ -251,67 +901,453 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-          switch (index) {
-            case 0:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => MyHomePage()),
-              );
-              break;
-            case 1:
-              if (isStudent) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => DashboardScreen()),
-                );
-              } else if (isInstructor) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => InstructorScreen()),
-                );
-              } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => AdminScreen()),
-                );
-              }
-              break;
+    );
+  }
 
-            case 2:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => UniversityLoginPage()),
-              );
-              break;
-            case 3:
-              // To be implemented
-              break;
-            default:
-              break;
-          }
-        },
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: textColor.withOpacity(0.7),
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_outlined, size: 28),
-            label: 'Profile',
+  Color _getGradeColor(String grade) {
+    switch (grade) {
+      case 'A':
+      case 'A+':
+        return Colors.green;
+      case 'A-':
+      case 'B+':
+        return Colors.lightGreen;
+      case 'B':
+        return Colors.orange;
+      case 'B-':
+      case 'C+':
+        return Colors.deepOrange;
+      case 'C':
+      case 'C-':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    final TextEditingController nameController = TextEditingController(text: _userData?['name']?.toString() ?? '');
+    final TextEditingController emailController = TextEditingController(text: _userData?['email']?.toString() ?? '');
+    final TextEditingController nationalIdController = TextEditingController(text: _userData?['nationalId']?.toString() ?? '');
+    final TextEditingController phoneController = TextEditingController(text: _userData?['phone']?.toString() ?? '');
+    final TextEditingController locationController = TextEditingController(text: _userData?['location']?.toString() ?? '');
+    final TextEditingController passwordController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.7,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // Header
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // Form Fields in Grid Layout
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Full Name', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: nameController,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Personal Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: emailController,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('National ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: nationalIdController,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Phone Number', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: phoneController,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: locationController,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('New Password (Leave empty to keep current)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: passwordController,
+                                    obscureText: true,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // Official Mail (Read-only)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Official Email (Cannot be changed)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 8),
+                            TextField(
+                              enabled: false,
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              ),
+                              controller: TextEditingController(text: _userData?['officialMail']?.toString() ?? ''),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // Info Box
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info, color: Colors.blue),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Profile changes will be submitted for admin approval. Password changes are applied immediately.',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Footer with buttons
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (nameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Name cannot be empty')),
+                          );
+                          return;
+                        }
+
+                        if (emailController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Email cannot be empty')),
+                          );
+                          return;
+                        }
+
+                        if (nationalIdController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('National ID cannot be empty')),
+                          );
+                          return;
+                        }
+
+                        try {
+                          final updateData = {
+                            'userId': _userData?['userId']?.toString() ?? '',
+                            'name': nameController.text.trim(),
+                            'email': emailController.text.trim(),
+                            'nationalId': nationalIdController.text.trim(),
+                            'phone': phoneController.text.trim(),
+                            'location': locationController.text.trim(),
+                            'role': _userData?['role']?.toString() ?? 'student',
+                          };
+
+                          if (passwordController.text.trim().isNotEmpty) {
+                            updateData['password'] = passwordController.text.trim();
+                          }
+
+                          final result = await _apiService.updateUser(updateData);
+
+                          if (result['status'] == 'success') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(result['message'])),
+                            );
+                            
+                            // Don't update local data - student should see old data until admin approves
+                            // Only refresh pending profile changes to show the notification
+                            _pendingProfileChanges = await _apiService.getPendingProfileChangesForUser(_userData!['userId']);
+                            setState(() {});
+                            
+                            Navigator.of(context).pop();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(result['message'])),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error updating profile: $e')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Save Changes', style: TextStyle(fontSize: 16)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
-          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildAnnouncementCard(Map<String, dynamic> announcement) {
+    Color priorityColor = _getPriorityColor(announcement['priority']?.toString() ?? 'medium');
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: priorityColor.withOpacity(0.3), width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: priorityColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    (announcement['priority']?.toString() ?? 'medium').toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _formatDate(announcement['createdAt']?.toString()),
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              announcement['title']?.toString() ?? 'No Title',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              announcement['content']?.toString() ?? 'No Content',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'urgent':
+        return Colors.red;
+      case 'high':
+        return Colors.orange;
+      case 'medium':
+        return Colors.blue;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'Unknown Date';
+    try {
+      DateTime date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return 'Unknown Date';
+    }
+  }
+
+  Color _getDepartmentColor(String departmentName) {
+    switch (departmentName.toLowerCase()) {
+      case 'computer and systems engineering':
+        return Colors.blue;
+      case 'architecture engineering':
+        return Colors.purple;
+      case 'mechanical power engineering':
+        return Colors.red;
+      case 'electronics and communication engineering':
+        return Colors.green;
+      case 'engineering physics and mathematics':
+        return Colors.orange;
+      case 'design and production engineering':
+        return Colors.teal;
+      case 'automotive engineering':
+        return Colors.indigo;
+      case 'mechatronics engineering':
+        return Colors.pink;
+      case 'urban design and planning':
+        return Colors.brown;
+      case 'electrical power and machines engineering':
+        return Colors.cyan;
+      case 'structural engineering':
+        return Colors.deepOrange;
+      case 'irrigation and hydraulics engineering':
+        return Colors.lightBlue;
+      case 'public works engineering':
+        return Colors.lightGreen;
+      default:
+        return Colors.grey;
+    }
   }
 }

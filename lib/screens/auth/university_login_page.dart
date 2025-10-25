@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 // Imports for the new structure
 import '../../services/api_services.dart'; // For ApiService
+import '../../common/app_state.dart'; // For global state variables
 import '../home/my_home_page.dart';      // For navigation to MyHomePage
-import '../../common/app_state.dart';      // For global state variables
-
-// Note: The global booleans (isStudent, isInstructor, isAdmin) are no longer
-// defined here. They are imported from app_state.dart and are modified
-// directly by the validator.
+import '../student/student_dashboard_screen.dart'; // For student dashboard
+import '../instructor/instructor_dashboard_screen.dart'; // For instructor dashboard
+import 'signup_screen.dart';              // For signup screen navigation
+import '../admin/admin_dashboard_screen.dart'; // For admin dashboard
 
 class UniversityLoginPage extends StatefulWidget {
   const UniversityLoginPage({super.key});
@@ -25,16 +25,69 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
 
 
 ////************************this is the real function for login********************************* */
-  // Future<void> _handleLogin() async {
-  //   final email = _idController.text.trim();
-  //   final password = _passwordController.text.trim();
+  Future<void> _handleLogin() async {
+    final email = _idController.text.trim();
+    final password = _passwordController.text.trim();
 
-  //   final result = await _apiService.login(email, password);
+    final result = await _apiService.login(email, password);
+
+    if (result['status'] == 'success') {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Login successful!')));
+
+      // Set global role flags
+      isStudent = false;
+      isInstructor = false;
+      isAdmin = false;
+      
+      if (result['role'] == 'admin') {
+        isAdmin = true;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        );
+      } else if (result['role'] == 'instructor') {
+        isInstructor = true;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const InstructorScreen()),
+        );
+      } else if (result['role'] == 'student') {
+        isStudent = true;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => StudentDashboardScreen(userEmail: email)),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MyHomePage()),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Login failed')),
+      );
+    }
+  }
+
+
+//************************this is a dummy function for login********************************* */
+// TEMPORARY FUNCTION FOR TESTING WITHOUT BACKEND
+  // Future<void> _handleLogin() async {
+  //   // We comment out the real API call:
+  //   // final email = _idController.text.trim();
+  //   // final password = _passwordController.text.trim();
+  //   // final result = await _apiService.login(email, password);
+
+  //   // Instead, we just pretend the login is always successful
+  //   final result = {'status': 'success'}; // FAKE SUCCESS!
 
   //   if (result['status'] == 'success') {
   //     ScaffoldMessenger.of(
   //       context,
-  //     ).showSnackBar(const SnackBar(content: Text('Login successful!')));
+  //     ).showSnackBar(const SnackBar(content: Text('Login successful! (Mocked)')));
 
   //     Navigator.pushReplacement(
   //       context,
@@ -46,34 +99,6 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
   //     );
   //   }
   // }
-
-
-//************************this is a dummy function for login********************************* */
-// TEMPORARY FUNCTION FOR TESTING WITHOUT BACKEND
-  Future<void> _handleLogin() async {
-    // We comment out the real API call:
-    // final email = _idController.text.trim();
-    // final password = _passwordController.text.trim();
-    // final result = await _apiService.login(email, password);
-
-    // Instead, we just pretend the login is always successful
-    final result = {'status': 'success'}; // FAKE SUCCESS!
-
-    if (result['status'] == 'success') {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Login successful! (Mocked)')));
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => MyHomePage()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Login failed')),
-      );
-    }
-  }
 
 
 
@@ -94,8 +119,8 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            double topSpacing = constraints.maxHeight * 0.12;
-            double logoSize = constraints.maxWidth * 0.22;
+            double topSpacing = constraints.maxHeight * 0.08;
+            double logoSize = constraints.maxWidth * 0.18;
             double inputWidth = constraints.maxWidth > 450
                 ? 400
                 : constraints.maxWidth * 0.85;
@@ -116,7 +141,7 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 24),
+                  SizedBox(height: 20),
                   Text(
                     "University App",
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -124,7 +149,7 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  SizedBox(height: 40),
+                  SizedBox(height: 30),
                   // Use Form widget
                   Form(
                     key: _formKey,
@@ -151,33 +176,11 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your Email';
                               }
-                              String email = value.trim().toLowerCase();
-                              if (email.endsWith('@eng.asu.edu.eg')) {
-                                isStudent = true;
-                                isInstructor = false;
-                                isAdmin = false;
-                                return null;
-                              }
-                              if (email.endsWith('@prof.asu.edu.eg')) {
-                                isInstructor = true;
-                                isStudent = false;
-                                isAdmin = false;
-                                return null;
-                              }
-                              if (email.endsWith('@admin.asu.edu.eg')) {
-                                isAdmin = true;
-                                isStudent = false;
-                                isInstructor = false;
-                                return null;
-                              }
-                              isStudent = false;
-                              isInstructor = false;
-                              isAdmin = false;
-                              return 'email must contain "@eng.asu.edu.eg" or "@prof.asu.edu.eg" or "@admin.asu.edu.eg"';
+                              return null;
                             },
                           ),
                         ),
-                        SizedBox(height: 18),
+                        SizedBox(height: 15),
                         SizedBox(
                           width: inputWidth,
                           child: TextFormField(
@@ -213,22 +216,11 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password';
                               }
-                              if (value.length < 8) {
-                                return 'Password must be at least 8 characters';
-                              }
-                              if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                                return 'Password must contain at least one uppercase letter';
-                              }
-                              if (!RegExp(
-                                r'[!@#\$%^&*(),.?":{}|<>]$',
-                              ).hasMatch(value)) {
-                                return 'Password must end with a special character';
-                              }
                               return null;
                             },
                           ),
                         ),
-                        SizedBox(height: 26),
+                        SizedBox(height: 20),
                         SizedBox(
                           width: inputWidth,
                           child: ElevatedButton(
@@ -273,10 +265,13 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                   SizedBox(height: screenSize.height * 0.1),
                   TextButton(
                     onPressed: () {
-                      // Handle registration logic or navigation
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignupScreen()),
+                      );
                     },
                     child: Text(
-                      "Register",
+                      "Don't have an account? Sign Up",
                       style: TextStyle(
                         color: Colors.white70,
                         fontWeight: FontWeight.w500,
