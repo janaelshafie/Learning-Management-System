@@ -2,8 +2,13 @@ package com.asu_lms.lms.Repositories;
 
 import com.asu_lms.lms.Entities.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+import java.util.List;
+
+@Repository
 public interface StudentRepository extends JpaRepository<Student, Integer> {
-    Optional<Student> findByStudentMail(String studentMail);
+    Optional<Student> findByStudentId(Integer studentId);
+    List<Student> findByParentUserId(Integer parentUserId);
 }

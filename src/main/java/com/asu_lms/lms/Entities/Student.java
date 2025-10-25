@@ -1,77 +1,58 @@
 package com.asu_lms.lms.Entities;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "student")
+@Table(name = "Student")
 public class Student {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "StudentID")
-    private int studentId;
+    @Column(name = "student_id")
+    private Integer studentId;
 
-    @Column(name = "UserName", nullable = false)
-    private String userName;
+    @Column(name = "student_uid")
+    private String studentUid;
 
-    @Column(name = "Studentmail", nullable = false, unique = true)
-    private String studentMail;
+    @Column(name = "cumulative_gpa", precision = 3, scale = 2)
+    private BigDecimal cumulativeGpa;
 
-    @Column(name = "StudentGpa", precision = 3, scale = 2)
-    private BigDecimal studentGpa;
+    @Column(name = "department_id")
+    private Integer departmentId;
 
-    @Column(name = "HighestGpa", precision = 3, scale = 2)
-    private BigDecimal highestGpa;
+    @Column(name = "advisor_id")
+    private Integer advisorId;
 
-    @Column(name = "LowestGpa", precision = 3, scale = 2)
-    private BigDecimal lowestGpa;
-
-    @Column(name = "CourseGpa", precision = 3, scale = 2)
-    private BigDecimal courseGpa;
-
-    @Column(name = "StudentPassword", nullable = false)
-    private String studentPassword;
+    @Column(name = "parent_user_id")
+    private Integer parentUserId;
 
     // Constructors
     public Student() {}
 
-    public Student(String userName, String studentMail, BigDecimal studentGpa,
-                   BigDecimal highestGpa, BigDecimal lowestGpa, BigDecimal courseGpa,
-                   String studentPassword) {
-        this.userName = userName;
-        this.studentMail = studentMail;
-        this.studentGpa = studentGpa;
-        this.highestGpa = highestGpa;
-        this.lowestGpa = lowestGpa;
-        this.courseGpa = courseGpa;
-        this.studentPassword = studentPassword;
+    public Student(Integer studentId, String studentUid, BigDecimal cumulativeGpa, Integer departmentId, Integer advisorId, Integer parentUserId) {
+        this.studentId = studentId;
+        this.studentUid = studentUid;
+        this.cumulativeGpa = cumulativeGpa;
+        this.departmentId = departmentId;
+        this.advisorId = advisorId;
+        this.parentUserId = parentUserId;
     }
 
     // Getters and Setters
-    public int getStudentId() { return studentId; }
-    public void setStudentId(int studentId) { this.studentId = studentId; }
+    public Integer getStudentId() { return studentId; }
+    public void setStudentId(Integer studentId) { this.studentId = studentId; }
 
-    public String getUserName() { return userName; }
-    public void setUserName(String userName) { this.userName = userName; }
+    public String getStudentUid() { return studentUid; }
+    public void setStudentUid(String studentUid) { this.studentUid = studentUid; }
 
-    public String getStudentMail() { return studentMail; }
-    public void setStudentMail(String studentMail) { this.studentMail = studentMail; }
+    public BigDecimal getCumulativeGpa() { return cumulativeGpa; }
+    public void setCumulativeGpa(BigDecimal cumulativeGpa) { this.cumulativeGpa = cumulativeGpa; }
 
-    public BigDecimal getStudentGpa() { return studentGpa; }
-    public void setStudentGpa(BigDecimal studentGpa) { this.studentGpa = studentGpa; }
+    public Integer getDepartmentId() { return departmentId; }
+    public void setDepartmentId(Integer departmentId) { this.departmentId = departmentId; }
 
-    public BigDecimal getHighestGpa() { return highestGpa; }
-    public void setHighestGpa(BigDecimal highestGpa) { this.highestGpa = highestGpa; }
+    public Integer getAdvisorId() { return advisorId; }
+    public void setAdvisorId(Integer advisorId) { this.advisorId = advisorId; }
 
-    public BigDecimal getLowestGpa() { return lowestGpa; }
-    public void setLowestGpa(BigDecimal lowestGpa) { this.lowestGpa = lowestGpa; }
-
-    public BigDecimal getCourseGpa() { return courseGpa; }
-    public void setCourseGpa(BigDecimal courseGpa) { this.courseGpa = courseGpa; }
-
-    public String getStudentPassword() { return studentPassword; }
-    public void setStudentPassword(String studentPassword) { this.studentPassword = studentPassword; }
-
+    public Integer getParentUserId() { return parentUserId; }
+    public void setParentUserId(Integer parentUserId) { this.parentUserId = parentUserId; }
 }
