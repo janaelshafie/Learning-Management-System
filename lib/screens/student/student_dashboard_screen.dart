@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
 import '../auth/university_login_page.dart';
 import 'course_details_screen.dart';
+import 'study_materials_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String? userEmail;
@@ -56,44 +57,43 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     });
 
     try {
+      print('Loading user data for email: ${widget.userEmail}');
+      
       // Get user data from backend using the logged-in user's email
       if (widget.userEmail != null) {
+        print('Calling getUserByEmail with: ${widget.userEmail}');
         final userResponse = await _apiService.getUserByEmail(widget.userEmail!);
+        print('User response: $userResponse');
+        
         if (userResponse['status'] == 'success') {
+          print('User data retrieved successfully: ${userResponse['data']}');
           setState(() {
             _userData = userResponse['data'];
           });
         } else {
-          // Fallback to mock data if API fails
+          // Show error if API fails
+          print('Error loading user data: ${userResponse['message']}');
           setState(() {
-            _userData = {
-              'userId': 301,
-              'name': 'Student Ali Ahmed',
-              'email': 'student.ali@mail.com',
-              'officialMail': 'ali.ahmed@student.uni.edu',
-              'phone': '123-456-7890',
-              'location': 'Cairo, Egypt',
-              'role': 'student',
-              'nationalId': '300000301',
-              'accountStatus': 'active',
-            };
+            _userData = null;
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading user data: ${userResponse['message'] ?? 'Unknown error'}')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
         }
       } else {
-        // Fallback to mock data if no email provided
+        // Show error if no email provided
+        print('No email provided in widget');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No email provided. Please log in again.')),
+        );
         setState(() {
-          _userData = {
-            'userId': 301,
-            'name': 'Student Ali Ahmed',
-            'email': 'student.ali@mail.com',
-            'officialMail': 'ali.ahmed@student.uni.edu',
-            'phone': '123-456-7890',
-            'location': 'Cairo, Egypt',
-            'role': 'student',
-            'nationalId': '300000301',
-            'accountStatus': 'active',
-          };
+          _isLoading = false;
         });
+        return;
       }
 
       // Load student course data from database
@@ -111,8 +111,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             _separateCoursesBySemester();
           });
         } else {
-          // Fallback to mock data if API fails
-          _loadMockCourseData();
+          // Show error if API fails
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading student data: ${studentDataResponse['message'] ?? 'Unknown error'}')),
+          );
         }
         
         // Load pending profile changes
@@ -121,14 +123,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         // Load announcements for students
         _announcements = await _apiService.getAnnouncementsForUserType('students_only');
       } else {
-        // Fallback to mock data if no user data
-        _loadMockCourseData();
+        // No user data available
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No user data available. Please log in again.')),
+        );
       }
       
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
+      print('Exception in _loadUserData: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading data: $e')),
+      );
       setState(() {
         _isLoading = false;
       });
@@ -325,8 +333,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           _buildNavItem(0, 'Dashboard', Icons.dashboard, true),
           _buildNavItem(1, 'Profile', Icons.person, false),
           _buildNavItem(2, 'Courses', Icons.book, false),
-          _buildNavItem(3, 'Academic Records', Icons.history_edu, false),
-          _buildNavItem(4, 'Services', Icons.settings, false),
+          _buildNavItem(3, 'Study Materials', Icons.library_books, false),
+          _buildNavItem(4, 'Academic Records', Icons.history_edu, false),
+          _buildNavItem(5, 'Services', Icons.settings, false),
           const Spacer(),
           // Logout Button
           Padding(
@@ -386,8 +395,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
       case 2:
         return _buildCourses();
       case 3:
-        return _buildAcademicRecords();
+        return _buildStudyMaterials();
       case 4:
+        return _buildAcademicRecords();
+      case 5:
         return _buildServices();
       default:
         return _buildDashboard();
@@ -487,8 +498,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             childAspectRatio: 1.5,
             children: [
               _buildQuickAccessCard('My Courses', Icons.book, () => setState(() => _selectedIndex = 2)),
-              _buildQuickAccessCard('Academic Records', Icons.history_edu, () => setState(() => _selectedIndex = 3)),
-              _buildQuickAccessCard('My Services', Icons.settings, () => setState(() => _selectedIndex = 4)),
+              _buildQuickAccessCard('Study Materials', Icons.library_books, () => setState(() => _selectedIndex = 3)),
+              _buildQuickAccessCard('Academic Records', Icons.history_edu, () => setState(() => _selectedIndex = 4)),
             ],
           ),
         ],
@@ -720,6 +731,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         ],
       ),
     );
+  }
+
+  Widget _buildStudyMaterials() {
+    return StudyMaterialsScreen(currentCourses: _currentCourses);
   }
 
   Widget _buildCourses() {

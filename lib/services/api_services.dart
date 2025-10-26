@@ -540,32 +540,99 @@ class ApiService {
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        return [];
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        }
       }
+      return [];
     } catch (e) {
       return [];
     }
   }
 
+  // Get course announcements for a specific course
+  Future<List<dynamic>> getCourseAnnouncements(int offeredCourseId) async {
+    final url = Uri.parse('http://localhost:8080/api/course/announcements/$offeredCourseId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return data['data'] ?? [];
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Get course materials for a specific course
+  Future<List<dynamic>> getCourseMaterials(int offeredCourseId) async {
+    final url = Uri.parse('http://localhost:8080/api/course/materials/$offeredCourseId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return data['data'] ?? [];
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Get offered course ID by course ID and semester ID
+  Future<int?> getOfferedCourseId(int courseId, int semesterId) async {
+    final url = Uri.parse('http://localhost:8080/api/course/offered-course-id');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'courseId': courseId, 'semesterId': semesterId}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return data['data']['offeredCourseId'];
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>> getUserByEmail(String email) async {
     final url = Uri.parse('http://localhost:8080/api/auth/get-user-by-email');
+    print('API: getUserByEmail called with email: $email');
+    print('API: URL: $url');
+    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
+      print('API: Response status code: ${response.statusCode}');
+      print('API: Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decodedResponse = jsonDecode(response.body);
+        print('API: Decoded response: $decodedResponse');
+        return decodedResponse;
       } else {
+        print('API: Error status code: ${response.statusCode}');
         return {
           'status': 'error',
           'message': 'Server error: ${response.statusCode}',
         };
       }
     } catch (e) {
+      print('API: Exception caught: $e');
       return {'status': 'error', 'message': 'Error: $e'};
     }
   }
