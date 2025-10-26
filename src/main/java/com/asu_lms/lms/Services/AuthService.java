@@ -14,6 +14,10 @@ public class AuthService {
     private UserRepository userRepository;
 
     public String login(String email, String password) {
+        // Trim the email to handle any whitespace
+        email = email != null ? email.trim() : "";
+        password = password != null ? password.trim() : "";
+        
         // Try to find user by email or official mail
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
@@ -22,7 +26,7 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            // Check password
+            // Check password (case sensitive comparison)
             if (user.getPasswordHash().equals(password)) {
                 // Check account status
                 if ("active".equals(user.getAccountStatus())) {

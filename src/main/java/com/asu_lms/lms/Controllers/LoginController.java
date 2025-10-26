@@ -23,14 +23,52 @@ public class LoginController {
     @Autowired
     private UserRepository userRepository;
 
+    // Debug endpoint to check database connection and users
+    @GetMapping("/debug/users")
+    public Map<String, Object> getAllUsers() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            java.util.List<User> users = userRepository.findAll();
+            response.put("status", "success");
+            response.put("totalUsers", users.size());
+            response.put("users", users.stream().map(user -> {
+                Map<String, String> userData = new HashMap<>();
+                userData.put("userId", String.valueOf(user.getUserId()));
+                userData.put("email", user.getEmail());
+                userData.put("officialMail", user.getOfficialMail());
+                userData.put("role", user.getRole());
+                userData.put("accountStatus", user.getAccountStatus());
+                return userData;
+            }).collect(java.util.stream.Collectors.toList()));
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+        }
+        return response;
+    }
+
     @PostMapping("/login")
     public Map<String , String> login(@RequestBody Map<String , String> request) {
         String email = request.get("email");
         String password = request.get("password");
-        String result = authService.login(email, password);
-
+        
         Map<String, String> response = new HashMap<>();
         
+        // Basic validation
+        if (email == null || email.trim().isEmpty()) {
+            response.put("status", "error");
+            response.put("message", "Email is required");
+            return response;
+        }
+        
+        if (password == null || password.trim().isEmpty()) {
+            response.put("status", "error");
+            response.put("message", "Password is required");
+            return response;
+        }
+        
+        String result = authService.login(email.trim(), password.trim());
+
         if (result.equals("pending")) {
             response.put("status", "error");
             response.put("message", "Your account is pending admin approval. Please wait for approval.");
@@ -94,7 +132,15 @@ public class LoginController {
         }
         
         try {
-            Optional<User> userOpt = userRepository.findByEmail(email.trim());
+            email = email.trim();
+            
+            // Try to find by email first
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                // If not found by email, try by official mail
+                userOpt = userRepository.findByOfficialMail(email);
+            }
+            
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 Map<String, Object> userData = new HashMap<>();
@@ -112,7 +158,7 @@ public class LoginController {
                 response.put("data", userData);
             } else {
                 response.put("status", "error");
-                response.put("message", "User not found");
+                response.put("message", "User not found with email: " + email);
             }
         } catch (Exception e) {
             response.put("status", "error");
