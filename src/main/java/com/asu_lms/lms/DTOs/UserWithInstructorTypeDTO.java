@@ -28,3 +28,4 @@ public class UserWithInstructorTypeDTO {
         this.instructorType = instructorType;
     }
 }
+

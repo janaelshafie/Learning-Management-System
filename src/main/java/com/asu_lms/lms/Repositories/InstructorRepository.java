@@ -11,3 +11,4 @@ public interface InstructorRepository extends JpaRepository<Instructor, Integer>
     Optional<Instructor> findByInstructorId(Integer instructorId);
     List<Instructor> findByInstructorType(String instructorType);
 }
+

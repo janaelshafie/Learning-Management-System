@@ -12,3 +12,4 @@ public interface SectionRepository extends JpaRepository<Section, Integer> {
     List<Section> findByOfferedCourseId(Integer offeredCourseId);
     Optional<Section> findBySectionId(Integer sectionId);
 }
+

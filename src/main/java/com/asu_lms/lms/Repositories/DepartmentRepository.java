@@ -12,3 +12,4 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
     List<Department> findByUnitHeadId(Integer unitHeadId);
     boolean existsByName(String name);
 }
+

@@ -78,3 +78,4 @@ public class Grade {
     public String getFinalLetterGrade() { return finalLetterGrade; }
     public void setFinalLetterGrade(String finalLetterGrade) { this.finalLetterGrade = finalLetterGrade; }
 }
+

@@ -12,3 +12,4 @@ public interface CourseRepository extends JpaRepository<Course, Integer> {
     List<Course> findByTitleContaining(String title);
     boolean existsByCourseCode(String courseCode);
 }
+

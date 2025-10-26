@@ -10,6 +10,7 @@ import com.asu_lms.lms.Entities.Section;
 import com.asu_lms.lms.Entities.OfferedCourse;
 import com.asu_lms.lms.Entities.Course;
 import com.asu_lms.lms.Entities.Department;
+import com.asu_lms.lms.Entities.Semester;
 import com.asu_lms.lms.Repositories.UserRepository;
 import com.asu_lms.lms.Repositories.InstructorRepository;
 import com.asu_lms.lms.Repositories.PendingProfileChangeRepository;
@@ -20,6 +21,7 @@ import com.asu_lms.lms.Repositories.SectionRepository;
 import com.asu_lms.lms.Repositories.OfferedCourseRepository;
 import com.asu_lms.lms.Repositories.CourseRepository;
 import com.asu_lms.lms.Repositories.DepartmentRepository;
+import com.asu_lms.lms.Repositories.SemesterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,6 +65,9 @@ public class AdminController {
 
     @Autowired
     private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private SemesterRepository semesterRepository;
 
     // Get all pending accounts
     @GetMapping("/pending-accounts")
@@ -689,6 +694,13 @@ public class AdminController {
                 
                 Course course = courseOpt.get();
                 
+                // Get semester details
+                Optional<Semester> semesterOpt = semesterRepository.findById(offeredCourse.getSemesterId());
+                String semesterName = "Unknown Semester";
+                if (semesterOpt.isPresent()) {
+                    semesterName = semesterOpt.get().getName();
+                }
+                
                 // Get grade for this enrollment
                 Optional<Grade> gradeOpt = gradeRepository.findByEnrollmentId(enrollment.getEnrollmentId());
                 
@@ -696,13 +708,24 @@ public class AdminController {
                 courseData.put("code", course.getCourseCode());
                 courseData.put("name", course.getTitle());
                 courseData.put("credits", course.getCredits());
-                courseData.put("semester", "Semester " + offeredCourse.getSemesterId());
+                courseData.put("semester", semesterName);
                 courseData.put("section", section.getSectionNumber());
                 
                 if (gradeOpt.isPresent()) {
                     Grade grade = gradeOpt.get();
                     String letterGrade = grade.getFinalLetterGrade();
                     courseData.put("grade", letterGrade != null ? letterGrade : "N/A");
+                    
+                    // Add detailed marks - convert BigDecimal to Double
+                    Map<String, Object> marks = new HashMap<>();
+                    marks.put("midterm", grade.getMidterm());
+                    marks.put("project", grade.getProject());
+                    marks.put("assignments_total", grade.getAssignmentsTotal());
+                    marks.put("quizzes_total", grade.getQuizzesTotal());
+                    marks.put("attendance", grade.getAttendance());
+                    marks.put("final_exam_mark", grade.getFinalExamMark());
+                    marks.put("final_letter_grade", letterGrade);
+                    courseData.put("marks", marks);
                     
                     // Calculate GPA points
                     if (letterGrade != null && !letterGrade.equals("N/A")) {
@@ -712,6 +735,7 @@ public class AdminController {
                     }
                 } else {
                     courseData.put("grade", "N/A");
+                    courseData.put("marks", new HashMap<>());
                 }
                 
                 courses.add(courseData);
