@@ -1286,6 +1286,280 @@ INSERT INTO Course (course_code, title, credits) VALUES
 ('UPL497', 'Housing & Urban Development Graduation Proj. (1)', 2),
 ('UPL498', 'Housing & Urban Development Graduation Proj. (2)', 6);
 
+-- -----------------------------------------------------------------
+-- --- Section 5: Academic History - Semesters, Enrollments, Grades
+-- -----------------------------------------------------------------
+
+-- Insert Past Semesters
+INSERT INTO Semester (semester_id, name, start_date, end_date, registration_open) VALUES
+(1, 'Fall 2022', '2022-09-01', '2022-12-31', 0),
+(2, 'Spring 2023', '2023-02-01', '2023-05-31', 0),
+(3, 'Fall 2023', '2023-09-01', '2023-12-31', 0),
+(4, 'Spring 2024', '2024-02-01', '2024-05-31', 0),
+(5, 'Fall 2024', '2024-09-01', '2024-12-31', 1);  -- Current semester
+
+-- Insert Offered Courses for Fall 2022 (Some engineering courses)
+INSERT INTO OfferedCourse (offered_course_id, course_id, semester_id) VALUES
+(1, 1, 1),   -- ASU111 - Human Rights, Fall 2022
+(2, 2, 1),   -- ASU112 - Report Writing, Fall 2022
+(3, 14, 1),  -- ENG111 - Fundamentals of Engineering, Fall 2022
+(4, 20, 1),  -- CSE111 - Logic Design, Fall 2022
+(5, 21, 1),  -- CSE131 - Computer Programming, Fall 2022
+(6, 30, 1),  -- CES111 - Structural Mechanics, Fall 2022
+(7, 80, 1);  -- EPM111 - Electrical Circuits, Fall 2022
+
+-- Insert Offered Courses for Spring 2023
+INSERT INTO OfferedCourse (offered_course_id, course_id, semester_id) VALUES
+(8, 3, 2),   -- ASU113 - Professional Ethics, Spring 2023
+(9, 22, 2),  -- CSE211 - Intro to Embedded Systems, Spring 2023
+(10, 31, 2), -- CES112 - Structural Mechanics (2), Spring 2023
+(11, 81, 2), -- EPM112 - Electromagnetic Fields, Spring 2023
+(12, 90, 2); -- MEP211 - Thermodynamics, Spring 2023
+
+-- Insert Offered Courses for Fall 2023
+INSERT INTO OfferedCourse (offered_course_id, course_id, semester_id) VALUES
+(13, 23, 3), -- CSE231 - Advanced Programming, Fall 2023
+(14, 32, 3), -- CES211 - Structural Analysis (1), Fall 2023
+(15, 82, 3), -- EPM211 - Properties of Materials, Fall 2023
+(16, 91, 3), -- MEP212 - Heat Transfer, Fall 2023
+(17, 50, 3); -- ARC111 - Principles of Architecture, Fall 2023
+
+-- Insert Offered Courses for Spring 2024
+INSERT INTO OfferedCourse (offered_course_id, course_id, semester_id) VALUES
+(18, 33, 4), -- CSE331 - Data Structures, Spring 2024
+(19, 34, 4), -- CSE333 - Database Systems, Spring 2024
+(20, 83, 4), -- EPM221 - Electrical Machines (1), Spring 2024
+(21, 51, 4), -- ARC112 - Creativity and Design, Spring 2024
+(22, 92, 4); -- MEP221 - Fluid Mechanics, Spring 2024
+
+-- Insert Sections for each Offered Course
+INSERT INTO Section (section_id, offered_course_id, ta_instructor_id, section_number, capacity, current_enrollment) VALUES
+-- Fall 2022 Sections
+(1, 1, 201, 'A', 40, 35),   -- ASU111 Section A
+(2, 2, 202, 'A', 40, 38),   -- ASU112 Section A
+(3, 3, 203, 'A', 40, 40),   -- ENG111 Section A
+(4, 4, 204, 'A', 35, 30),   -- CSE111 Section A
+(5, 5, 205, 'A', 35, 32),   -- CSE131 Section A
+(6, 6, 206, 'A', 40, 25),   -- CES111 Section A
+(7, 7, 207, 'A', 40, 28),   -- EPM111 Section A
+-- Spring 2023 Sections
+(8, 8, 201, 'A', 40, 35),   -- ASU113 Section A
+(9, 9, 203, 'A', 35, 28),   -- CSE211 Section A
+(10, 10, 206, 'A', 40, 30), -- CES112 Section A
+(11, 11, 207, 'A', 40, 32), -- EPM112 Section A
+(12, 12, 208, 'A', 40, 26), -- MEP211 Section A
+-- Fall 2023 Sections
+(13, 13, 204, 'A', 35, 30), -- CSE231 Section A
+(14, 14, 206, 'A', 40, 28), -- CES211 Section A
+(15, 15, 207, 'A', 40, 32), -- EPM211 Section A
+(16, 16, 208, 'A', 40, 30), -- MEP212 Section A
+(17, 17, 209, 'A', 35, 25), -- ARC111 Section A
+-- Spring 2024 Sections
+(18, 18, 205, 'A', 35, 32), -- CSE331 Section A
+(19, 19, 204, 'A', 35, 30), -- CSE333 Section A
+(20, 20, 207, 'A', 40, 28), -- EPM221 Section A
+(21, 21, 209, 'A', 35, 27), -- ARC112 Section A
+(22, 22, 208, 'A', 40, 26); -- MEP221 Section A
+
+-- Link Instructors to OfferedCourses
+INSERT INTO OfferedCourse_Instructor (offered_course_id, instructor_id) VALUES
+(1, 101), (2, 102), (3, 103), (4, 104), (5, 105), (6, 106), (7, 107),  -- Fall 2022
+(8, 101), (9, 104), (10, 106), (11, 107), (12, 108),                     -- Spring 2023
+(13, 104), (14, 106), (15, 107), (16, 108), (17, 102),                   -- Fall 2023
+(18, 104), (19, 104), (20, 107), (21, 102), (22, 108);                    -- Spring 2024
+
+-- Insert Enrollments for Students - Fall 2022
+INSERT INTO Enrollment (enrollment_id, student_id, section_id, status) VALUES
+(1, 301, 1, 'approved'), (2, 301, 2, 'approved'), (3, 301, 3, 'approved'), (4, 301, 4, 'approved'), (5, 301, 5, 'approved'),
+(6, 302, 1, 'approved'), (7, 302, 2, 'approved'), (8, 302, 6, 'approved'), (9, 302, 7, 'approved'),
+(10, 303, 1, 'approved'), (11, 303, 3, 'approved'), (12, 303, 7, 'approved'),
+(13, 304, 2, 'approved'), (14, 304, 4, 'approved'), (15, 304, 5, 'approved'),
+(16, 305, 1, 'approved'), (17, 305, 3, 'approved'), (18, 305, 4, 'approved'), (19, 305, 5, 'approved'),
+(20, 306, 1, 'approved'), (21, 306, 2, 'approved'), (22, 306, 6, 'approved'),
+(23, 307, 2, 'approved'), (24, 307, 3, 'approved'), (25, 307, 7, 'approved'), (26, 307, 1, 'approved'),
+(27, 308, 1, 'approved'), (28, 308, 3, 'approved'), (29, 308, 4, 'approved'),
+(30, 309, 1, 'approved'), (31, 309, 2, 'approved'), (32, 309, 5, 'approved'),
+(33, 310, 1, 'approved'), (34, 310, 2, 'approved'), (35, 310, 6, 'approved');
+
+-- Insert Enrollments for Students - Spring 2023
+INSERT INTO Enrollment (enrollment_id, student_id, section_id, status) VALUES
+(36, 301, 8, 'approved'), (37, 301, 9, 'approved'), (38, 301, 10, 'approved'), (39, 301, 11, 'approved'),
+(40, 302, 8, 'approved'), (41, 302, 9, 'approved'), (42, 302, 11, 'approved'),
+(43, 303, 8, 'approved'), (44, 303, 12, 'approved'),
+(45, 304, 8, 'approved'), (46, 304, 9, 'approved'), (47, 304, 10, 'approved'),
+(48, 305, 8, 'approved'), (49, 305, 9, 'approved'), (50, 305, 10, 'approved'),
+(51, 306, 8, 'approved'), (52, 306, 11, 'approved'), (53, 306, 12, 'approved'),
+(54, 307, 8, 'approved'), (55, 307, 10, 'approved'), (56, 307, 12, 'approved'),
+(57, 308, 8, 'approved'), (58, 308, 9, 'approved'), (59, 308, 11, 'approved'),
+(60, 309, 8, 'approved'), (61, 309, 10, 'approved'),
+(62, 310, 8, 'approved'), (63, 310, 11, 'approved'), (64, 310, 12, 'approved');
+
+-- Insert Enrollments for Students - Fall 2023
+INSERT INTO Enrollment (enrollment_id, student_id, section_id, status) VALUES
+(65, 301, 13, 'approved'), (66, 301, 14, 'approved'), (67, 301, 15, 'approved'),
+(68, 302, 13, 'approved'), (69, 302, 16, 'approved'), (70, 302, 17, 'approved'),
+(71, 303, 15, 'approved'), (72, 303, 16, 'approved'),
+(73, 304, 13, 'approved'), (74, 304, 14, 'approved'), (75, 304, 15, 'approved'),
+(76, 305, 13, 'approved'), (77, 305, 14, 'approved'), (78, 305, 15, 'approved'),
+(79, 306, 15, 'approved'), (80, 306, 16, 'approved'), (81, 306, 17, 'approved'),
+(82, 307, 14, 'approved'), (83, 307, 15, 'approved'), (84, 307, 16, 'approved'),
+(85, 308, 13, 'approved'), (86, 308, 14, 'approved'),
+(87, 309, 13, 'approved'), (88, 309, 15, 'approved'), (89, 309, 16, 'approved'),
+(90, 310, 14, 'approved'), (91, 310, 17, 'approved');
+
+-- Insert Enrollments for Students - Spring 2024
+INSERT INTO Enrollment (enrollment_id, student_id, section_id, status) VALUES
+(92, 301, 18, 'approved'), (93, 301, 19, 'approved'), (94, 301, 20, 'approved'),
+(95, 302, 19, 'approved'), (96, 302, 21, 'approved'), (97, 302, 22, 'approved'),
+(98, 303, 20, 'approved'), (99, 303, 22, 'approved'),
+(100, 304, 18, 'approved'), (101, 304, 19, 'approved'), (102, 304, 20, 'approved'),
+(103, 305, 18, 'approved'), (104, 305, 19, 'approved'), (105, 305, 20, 'approved'),
+(106, 306, 20, 'approved'), (107, 306, 21, 'approved'), (108, 306, 22, 'approved'),
+(109, 307, 18, 'approved'), (110, 307, 20, 'approved'), (111, 307, 22, 'approved'),
+(112, 308, 18, 'approved'), (113, 308, 19, 'approved'),
+(114, 309, 19, 'approved'), (115, 309, 20, 'approved'), (116, 309, 21, 'approved'),
+(117, 310, 18, 'approved'), (118, 310, 21, 'approved');
+
+-- Insert Grades for Fall 2022 Enrollments
+INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade) VALUES
+-- Student 301 - Fall 2022
+(1, 17.5, 18.0, 9.0, 4.5, 5.0, 85.0, 'A+'),
+(2, 16.0, 17.0, 8.5, 4.0, 5.0, 78.0, 'A'),
+(3, 18.0, 16.0, 9.0, 4.5, 5.0, 82.0, 'A'),
+(4, 15.0, 15.5, 8.0, 3.5, 4.5, 75.0, 'B+'),
+(5, 16.5, 17.5, 9.0, 4.0, 5.0, 80.0, 'A'),
+-- Student 302 - Fall 2022
+(6, 18.0, 18.5, 9.5, 5.0, 5.0, 88.0, 'A+'),
+(7, 17.0, 17.5, 9.0, 4.5, 5.0, 82.0, 'A'),
+(8, 19.0, 19.0, 10.0, 5.0, 5.0, 92.0, 'A+'),
+(9, 16.5, 16.0, 8.5, 4.0, 4.5, 76.0, 'A-'),
+-- Student 303 - Fall 2022
+(10, 14.0, 15.0, 7.5, 3.0, 4.0, 68.0, 'B'),
+(11, 16.0, 14.5, 8.0, 3.5, 4.5, 72.0, 'B+'),
+(12, 13.5, 13.0, 7.0, 2.5, 3.5, 65.0, 'C+'),
+-- Student 304 - Fall 2022
+(13, 19.5, 19.0, 10.0, 5.0, 5.0, 95.0, 'A+'),
+(14, 18.0, 18.5, 9.5, 4.5, 5.0, 88.0, 'A+'),
+(15, 17.5, 17.0, 9.0, 4.5, 5.0, 84.0, 'A'),
+-- Student 305 - Fall 2022
+(16, 12.0, 14.0, 7.0, 3.0, 3.5, 62.0, 'C'),
+(17, 13.0, 12.5, 7.5, 3.5, 4.0, 66.0, 'C+'),
+(18, 14.5, 13.5, 8.0, 3.5, 4.0, 69.0, 'B-'),
+(19, 15.0, 14.5, 8.5, 4.0, 4.5, 73.0, 'B+'),
+-- Student 306 - Fall 2022
+(20, 17.5, 17.0, 9.0, 4.5, 5.0, 85.0, 'A'),
+(21, 16.5, 16.5, 8.5, 4.0, 5.0, 80.0, 'A'),
+(22, 15.5, 15.0, 8.0, 3.5, 4.5, 75.0, 'B+'),
+-- Student 307 - Fall 2022
+(23, 14.0, 14.5, 7.5, 3.5, 4.0, 71.0, 'B'),
+(24, 15.0, 15.0, 8.0, 3.5, 4.5, 76.0, 'A-'),
+(25, 16.5, 16.0, 8.5, 4.0, 4.5, 81.0, 'A'),
+(26, 13.0, 13.5, 7.0, 3.0, 3.5, 66.0, 'C+'),
+-- Student 308 - Fall 2022
+(27, 18.5, 18.0, 9.5, 4.5, 5.0, 92.0, 'A+'),
+(28, 17.0, 17.5, 9.0, 4.5, 5.0, 86.0, 'A'),
+(29, 16.5, 16.5, 8.5, 4.0, 5.0, 83.0, 'A'),
+-- Student 309 - Fall 2022
+(30, 12.5, 13.5, 7.0, 2.5, 3.5, 60.0, 'C'),
+(31, 13.5, 14.0, 7.5, 3.0, 4.0, 69.0, 'B-'),
+(32, 14.0, 15.5, 8.0, 3.5, 4.5, 76.0, 'A-'),
+-- Student 310 - Fall 2022
+(33, 19.0, 18.5, 9.5, 4.5, 5.0, 94.0, 'A+'),
+(34, 18.5, 18.0, 9.0, 4.5, 5.0, 90.0, 'A+'),
+(35, 17.5, 17.0, 8.5, 4.0, 5.0, 86.0, 'A');
+
+-- Insert Grades for Spring 2023 Enrollments
+INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade) VALUES
+(36, 18.0, 18.5, 9.5, 4.5, 5.0, 90.0, 'A+'),
+(37, 16.5, 17.0, 9.0, 4.0, 5.0, 82.0, 'A'),
+(38, 17.5, 16.0, 8.5, 4.5, 5.0, 79.0, 'A-'),
+(39, 15.5, 16.5, 8.0, 3.5, 4.5, 76.0, 'A-'),
+(40, 19.0, 18.0, 9.5, 5.0, 5.0, 92.0, 'A+'),
+(41, 17.0, 17.5, 9.0, 4.5, 5.0, 85.0, 'A'),
+(42, 14.5, 15.0, 7.5, 3.5, 4.0, 70.0, 'B'),
+(43, 13.0, 14.5, 7.0, 3.0, 3.5, 65.0, 'C+'),
+(44, 15.0, 13.5, 8.0, 3.5, 4.5, 72.0, 'B+'),
+(45, 20.0, 19.5, 10.0, 5.0, 5.0, 98.0, 'A+'),
+(46, 18.5, 18.0, 9.5, 4.5, 5.0, 90.0, 'A+'),
+(47, 19.0, 19.0, 10.0, 5.0, 5.0, 93.0, 'A+'),
+(48, 12.5, 13.0, 7.0, 2.5, 3.5, 60.0, 'C'),
+(49, 14.0, 14.5, 8.0, 3.5, 4.0, 68.0, 'B'),
+(50, 15.0, 15.5, 8.5, 4.0, 4.5, 74.0, 'B+'),
+(51, 17.5, 16.5, 8.5, 4.0, 4.5, 78.0, 'A'),
+(52, 16.0, 15.5, 8.0, 3.5, 4.0, 75.0, 'B+'),
+(53, 18.0, 17.0, 9.0, 4.5, 5.0, 84.0, 'A'),
+(54, 14.5, 15.5, 7.5, 3.5, 4.0, 71.0, 'B'),
+(55, 13.5, 14.0, 7.0, 3.0, 3.5, 66.0, 'C+'),
+(56, 15.5, 14.5, 8.0, 3.5, 4.5, 73.0, 'B+'),
+(57, 19.5, 18.5, 9.5, 5.0, 5.0, 94.0, 'A+'),
+(58, 17.0, 17.5, 9.0, 4.5, 5.0, 86.0, 'A'),
+(59, 16.5, 16.0, 8.5, 4.0, 4.5, 80.0, 'A'),
+(60, 11.5, 12.0, 6.5, 2.5, 3.0, 57.0, 'C-'),
+(61, 13.0, 13.5, 7.5, 3.5, 4.0, 69.0, 'B-'),
+(62, 16.5, 15.5, 8.0, 3.5, 4.0, 76.0, 'A-'),
+(63, 15.0, 16.0, 8.5, 4.0, 4.5, 78.0, 'A'),
+(64, 18.5, 17.5, 9.0, 4.5, 5.0, 89.0, 'A+');
+
+-- Insert Grades for Fall 2023 Enrollments
+INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade) VALUES
+(65, 18.5, 19.0, 9.5, 4.5, 5.0, 92.0, 'A+'),
+(66, 17.0, 16.5, 9.0, 4.0, 5.0, 83.0, 'A'),
+(67, 16.5, 17.5, 8.5, 4.5, 5.0, 81.0, 'A'),
+(68, 20.0, 19.5, 10.0, 5.0, 5.0, 97.0, 'A+'),
+(69, 18.0, 18.5, 9.5, 4.5, 5.0, 89.0, 'A+'),
+(70, 19.5, 19.0, 10.0, 5.0, 5.0, 94.0, 'A+'),
+(71, 14.0, 15.5, 7.5, 3.5, 4.5, 73.0, 'B+'),
+(72, 13.5, 14.0, 7.0, 3.0, 3.5, 67.0, 'C+'),
+(73, 19.0, 18.5, 9.5, 4.5, 5.0, 91.0, 'A+'),
+(74, 18.5, 18.0, 9.0, 4.5, 5.0, 88.0, 'A+'),
+(75, 17.5, 17.0, 9.0, 4.0, 5.0, 85.0, 'A'),
+(76, 12.0, 13.5, 7.0, 2.5, 3.5, 61.0, 'C'),
+(77, 13.5, 14.5, 8.0, 3.5, 4.0, 70.0, 'B'),
+(78, 14.0, 15.0, 8.5, 4.0, 4.5, 73.0, 'B+'),
+(79, 17.0, 16.5, 8.5, 4.0, 4.5, 80.0, 'A'),
+(80, 15.5, 16.0, 8.0, 3.5, 4.0, 77.0, 'A-'),
+(81, 18.5, 17.5, 9.0, 4.5, 5.0, 87.0, 'A'),
+(82, 15.0, 16.5, 8.5, 4.0, 4.5, 79.0, 'A-'),
+(83, 14.5, 15.5, 8.0, 3.5, 4.0, 75.0, 'B+'),
+(84, 16.0, 15.0, 8.5, 4.0, 4.5, 78.0, 'A'),
+(85, 19.0, 18.0, 9.5, 4.5, 5.0, 90.0, 'A+'),
+(86, 17.5, 17.0, 9.0, 4.5, 5.0, 85.0, 'A'),
+(87, 11.0, 12.5, 6.5, 2.5, 3.0, 58.0, 'C-'),
+(88, 12.5, 13.0, 7.0, 3.0, 3.5, 64.0, 'C+'),
+(89, 13.0, 14.0, 7.5, 3.5, 4.0, 70.0, 'B'),
+(90, 16.5, 15.5, 8.0, 3.5, 4.0, 76.0, 'A-'),
+(91, 18.0, 17.5, 9.0, 4.5, 5.0, 86.0, 'A');
+
+-- Insert Grades for Spring 2024 Enrollments
+INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade) VALUES
+(92, 17.5, 18.0, 9.0, 4.5, 5.0, 88.0, 'A+'),
+(93, 18.0, 17.5, 9.5, 4.5, 5.0, 91.0, 'A+'),
+(94, 16.5, 16.0, 8.5, 4.0, 4.5, 82.0, 'A'),
+(95, 19.5, 19.0, 10.0, 5.0, 5.0, 96.0, 'A+'),
+(96, 18.5, 18.0, 9.5, 4.5, 5.0, 90.0, 'A+'),
+(97, 20.0, 19.5, 10.0, 5.0, 5.0, 98.0, 'A+'),
+(98, 14.5, 15.0, 7.5, 3.5, 4.0, 71.0, 'B'),
+(99, 15.0, 14.5, 8.0, 3.5, 4.5, 75.0, 'B+'),
+(100, 18.5, 18.5, 9.5, 4.5, 5.0, 92.0, 'A+'),
+(101, 19.0, 19.0, 10.0, 5.0, 5.0, 95.0, 'A+'),
+(102, 17.0, 17.5, 9.0, 4.0, 5.0, 85.0, 'A'),
+(103, 11.5, 13.0, 7.0, 2.5, 3.0, 59.0, 'C-'),
+(104, 12.5, 14.0, 7.5, 3.0, 3.5, 65.0, 'C+'),
+(105, 13.5, 15.0, 8.0, 3.5, 4.0, 72.0, 'B+'),
+(106, 18.0, 17.0, 9.0, 4.5, 5.0, 87.0, 'A'),
+(107, 17.5, 16.5, 8.5, 4.0, 4.5, 84.0, 'A'),
+(108, 19.0, 18.5, 9.5, 4.5, 5.0, 93.0, 'A+'),
+(109, 15.5, 16.0, 8.5, 4.0, 4.5, 80.0, 'A'),
+(110, 14.0, 15.5, 8.0, 3.5, 4.0, 74.0, 'B+'),
+(111, 16.0, 15.0, 8.5, 3.5, 4.5, 78.0, 'A'),
+(112, 19.5, 19.0, 9.5, 5.0, 5.0, 95.0, 'A+'),
+(113, 18.0, 18.5, 9.5, 4.5, 5.0, 91.0, 'A+'),
+(114, 12.0, 13.5, 7.0, 3.0, 3.5, 63.0, 'C+'),
+(115, 13.0, 14.5, 7.5, 3.5, 4.0, 71.0, 'B'),
+(116, 14.5, 15.5, 8.0, 3.5, 4.5, 76.0, 'A-'),
+(117, 17.5, 17.0, 9.0, 4.5, 5.0, 86.0, 'A'),
+(118, 18.5, 18.0, 9.5, 4.5, 5.0, 90.0, 'A+');
+
 -- -----------------------------------------------------
 -- Script End
 -- -----------------------------------------------------

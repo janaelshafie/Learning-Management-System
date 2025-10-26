@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
 import '../auth/university_login_page.dart';
+import 'course_details_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String? userEmail;
@@ -32,10 +33,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   // Announcements data
   List<dynamic> _announcements = [];
 
+  // Separate lists for current courses and academic records
+  List<Map<String, dynamic>> _currentCourses = [];
+  List<Map<String, dynamic>> _academicRecords = [];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadUserData();
   }
 
@@ -101,6 +106,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             _cumulativeGPA = (studentData['cumulativeGPA'] ?? 0.0).toDouble();
             _completedCredits = studentData['completedCredits'] ?? 0;
             _departmentName = studentData['departmentName'] ?? 'No Department';
+            
+            // Separate current courses from academic records
+            _separateCoursesBySemester();
           });
         } else {
           // Fallback to mock data if API fails
@@ -125,6 +133,61 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         _isLoading = false;
       });
     }
+  }
+
+  void _separateCoursesBySemester() {
+    _currentCourses = [];
+    _academicRecords = [];
+    
+    for (var course in _courses) {
+      String semester = course['semester']?.toString() ?? '';
+      String semesterLower = semester.toLowerCase();
+      
+      // Current semester detection
+      bool isCurrentSemester = false;
+      
+      // Check for Fall 2024 (current semester)
+      if (semesterLower.contains('fall 2024')) {
+        isCurrentSemester = true;
+      } 
+      // Spring 2024 is already past
+      else if (semesterLower.contains('spring 2024')) {
+        isCurrentSemester = false;
+      }
+      // Check for date patterns (2024-09 through 2024-12)
+      else if (semesterLower.contains('2024-09') ||
+               semesterLower.contains('2024-10') ||
+               semesterLower.contains('2024-11') ||
+               semesterLower.contains('2024-12')) {
+        isCurrentSemester = true;
+      } else if (semesterLower.contains('2024')) {
+        // Check if it's a 2024 course without a completed grade
+        String? grade = course['grade']?.toString();
+        if (grade == null || grade.isEmpty || grade == '-' || grade == 'I' || grade == 'N/A') {
+          // No grade yet = current ongoing course
+          isCurrentSemester = true;
+        } else {
+          // Has a grade = past semester
+          isCurrentSemester = false;
+        }
+      } else {
+        // Any other year = past semester
+        isCurrentSemester = false;
+      }
+      
+      if (isCurrentSemester) {
+        _currentCourses.add(course);
+      } else {
+        _academicRecords.add(course);
+      }
+    }
+    
+    // Sort academic records by semester (most recent first)
+    _academicRecords.sort((a, b) {
+      String semesterA = a['semester']?.toString() ?? '';
+      String semesterB = b['semester']?.toString() ?? '';
+      return semesterB.compareTo(semesterA);
+    });
   }
 
   void _loadMockCourseData() {
@@ -154,6 +217,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         _cumulativeGPA = totalPoints / totalCredits;
         _completedCredits = totalCredits;
       }
+      
+      // Separate current courses from academic records
+      _separateCoursesBySemester();
     });
   }
 
@@ -259,7 +325,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           _buildNavItem(0, 'Dashboard', Icons.dashboard, true),
           _buildNavItem(1, 'Profile', Icons.person, false),
           _buildNavItem(2, 'Courses', Icons.book, false),
-          _buildNavItem(3, 'Services', Icons.settings, false),
+          _buildNavItem(3, 'Academic Records', Icons.history_edu, false),
+          _buildNavItem(4, 'Services', Icons.settings, false),
           const Spacer(),
           // Logout Button
           Padding(
@@ -292,7 +359,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? Colors.white.withOpacity(0.2) : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
@@ -319,6 +386,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
       case 2:
         return _buildCourses();
       case 3:
+        return _buildAcademicRecords();
+      case 4:
         return _buildServices();
       default:
         return _buildDashboard();
@@ -412,13 +481,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
+            crossAxisCount: 3,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             childAspectRatio: 1.5,
             children: [
               _buildQuickAccessCard('My Courses', Icons.book, () => setState(() => _selectedIndex = 2)),
-              _buildQuickAccessCard('My Services', Icons.settings, () => setState(() => _selectedIndex = 3)),
+              _buildQuickAccessCard('Academic Records', Icons.history_edu, () => setState(() => _selectedIndex = 3)),
+              _buildQuickAccessCard('My Services', Icons.settings, () => setState(() => _selectedIndex = 4)),
             ],
           ),
         ],
@@ -666,6 +736,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               color: Color(0xFF1E3A8A),
             ),
           ),
+          const SizedBox(height: 8),
+          const Text(
+            'Current Semester Courses',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
           const SizedBox(height: 24),
           // Course Statistics
           Row(
@@ -676,8 +754,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text('Total Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('${_courses.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const Text('Current Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('${_currentCourses.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -715,7 +793,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                       ),
           const SizedBox(height: 24),
           // Course List
-          ..._courses.map((course) => Card(
+          if (_currentCourses.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.book, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No courses for current semester',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._currentCourses.map((course) => Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               leading: CircleAvatar(
@@ -747,9 +842,216 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   color: _getGradeColor(course['grade']),
                 ),
               ),
+              onTap: () => _navigateToCourseDetails(course),
             ),
           )).toList(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAcademicRecords() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Academic Records',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Past Semesters & Grades',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Semester Stats
+          Row(
+            children: [
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Total Semesters', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('${_getUniqueSemesters().length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Total Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('${_academicRecords.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('Credits Earned', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        Text('$_completedCredits', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Academic Records List
+          if (_academicRecords.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.history_edu, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No academic records yet',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._buildGroupedAcademicRecords(),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupedAcademicRecords() {
+    // Group courses by semester
+    Map<String, List<Map<String, dynamic>>> groupedRecords = {};
+    for (var course in _academicRecords) {
+      String semester = course['semester']?.toString() ?? 'Unknown';
+      if (!groupedRecords.containsKey(semester)) {
+        groupedRecords[semester] = [];
+      }
+      groupedRecords[semester]!.add(course);
+    }
+
+    List<Widget> widgets = [];
+    groupedRecords.forEach((semester, courses) {
+      // Semester Header
+      widgets.add(
+        Container(
+          margin: const EdgeInsets.only(top: 24, bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E3A8A),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.school, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                semester.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${courses.length} course(s)',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Courses in this semester
+      widgets.addAll(courses.map((course) => Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            backgroundColor: _getGradeColor(course['grade']).withOpacity(0.2),
+            child: Text(
+              course['grade'],
+              style: TextStyle(
+                color: _getGradeColor(course['grade']),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          title: Text(
+            course['code'],
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(course['name']),
+              const SizedBox(height: 4),
+              Text(
+                '${course['credits']} Credits',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                course['grade'],
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _getGradeColor(course['grade']),
+                ),
+              ),
+            ],
+          ),
+          onTap: () => _navigateToCourseDetails(course),
+        ),
+      )));
+    });
+
+    return widgets;
+  }
+
+  List<String> _getUniqueSemesters() {
+    return _academicRecords.map((course) => course['semester']?.toString() ?? '').toSet().toList();
+  }
+
+  void _navigateToCourseDetails(Map<String, dynamic> course) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CourseDetailsScreen(course: course),
       ),
     );
   }
