@@ -99,7 +99,8 @@ CREATE TABLE Course (
     course_code VARCHAR(20) NOT NULL UNIQUE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    credits INT NOT NULL
+    credits INT NOT NULL,
+    course_type VARCHAR(10) CHECK (course_type IN ('core', 'elective'))
 );
 
 CREATE TABLE Semester (
@@ -119,6 +120,22 @@ CREATE TABLE Prerequisite (
         ON UPDATE NO ACTION,
     FOREIGN KEY (prereq_course_id) REFERENCES Course(course_id)
         ON DELETE NO ACTION
+        ON UPDATE NO ACTION,
+    CHECK (course_id != prereq_course_id)
+);
+
+CREATE TABLE DepartmentCourse (
+    department_id INT NOT NULL,
+    course_id INT NOT NULL,
+    course_type VARCHAR(10) NOT NULL CHECK (course_type IN ('core', 'elective')),
+    capacity INT,
+    eligibility_requirements TEXT,
+    PRIMARY KEY (department_id, course_id),
+    FOREIGN KEY (department_id) REFERENCES Department(department_id)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION,
+    FOREIGN KEY (course_id) REFERENCES Course(course_id)
+        ON DELETE CASCADE
         ON UPDATE NO ACTION
 );
 

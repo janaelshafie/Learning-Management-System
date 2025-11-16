@@ -5,7 +5,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../../common/pdf_view_page.dart';     // For PdfViewPage
 import '../../common/app_state.dart';       // For global state variables
 import '../student/student_dashboard_screen.dart'; // For StudentDashboardScreen
-import '../instructor/instructor_dashboard_screen.dart'; // For InstructorScreen
+// TODO: Uncomment when instructor dashboard is implemented
+// import '../instructor/instructor_dashboard_screen.dart'; // For InstructorScreen
 import '../auth/university_login_page.dart';  // For UniversityLoginPage
 
 // Note: The PdfViewPage class is no longer here.
@@ -294,10 +295,22 @@ class _MyHomePageState extends State<MyHomePage> {
                   context,
                   MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
                 );
-              } else if (isInstructor) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => InstructorScreen()),
+              } 
+              // TODO: Uncomment when instructor dashboard is implemented
+              // else if (isInstructor) {
+              //   Navigator.pushReplacement(
+              //     context,
+              //     MaterialPageRoute(builder: (_) => InstructorScreen()),
+              //   );
+              // } 
+              else if (isInstructor) {
+                // Instructor dashboard is not implemented yet
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Instructor dashboard is not implemented yet.'),
+                    duration: Duration(seconds: 3),
+                    backgroundColor: Colors.orange,
+                  ),
                 );
               } else {
                 // Admin users should go to admin dashboard

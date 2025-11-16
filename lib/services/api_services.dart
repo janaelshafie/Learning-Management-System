@@ -425,6 +425,201 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getCoursePrerequisites(int courseId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/$courseId/prerequisites');
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> addPrerequisite(int courseId, int prereqCourseId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/prerequisites/add');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'courseId': courseId.toString(),
+          'prereqCourseId': prereqCourseId.toString(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> removePrerequisite(int courseId, int prereqCourseId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/prerequisites/remove');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'courseId': courseId.toString(),
+          'prereqCourseId': prereqCourseId.toString(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> linkCourseToDepartment({
+    required int departmentId,
+    required int courseId,
+    required String courseType,
+    int? capacity,
+    String? eligibilityRequirements,
+  }) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/link');
+
+    try {
+      final body = {
+        'departmentId': departmentId.toString(),
+        'courseId': courseId.toString(),
+        'courseType': courseType,
+      };
+      if (capacity != null) {
+        body['capacity'] = capacity.toString();
+      }
+      if (eligibilityRequirements != null && eligibilityRequirements.isNotEmpty) {
+        body['eligibilityRequirements'] = eligibilityRequirements;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> unlinkCourseFromDepartment(int departmentId, int courseId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/unlink');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'departmentId': departmentId.toString(),
+          'courseId': courseId.toString(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getDepartmentCourses(int departmentId, {String? courseType}) async {
+    String urlString = 'http://localhost:8080/api/admin/courses/departments/$departmentId/courses';
+    if (courseType != null && courseType.isNotEmpty) {
+      urlString += '?courseType=$courseType';
+    }
+    final url = Uri.parse(urlString);
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getCoreCourses(int departmentId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/$departmentId/core-courses');
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getElectiveCourses(int departmentId) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/$departmentId/elective-courses');
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
   Future<Map<String, dynamic>> getAllInstructors() async {
     final url = Uri.parse('http://localhost:8080/api/admin/departments/instructors');
 

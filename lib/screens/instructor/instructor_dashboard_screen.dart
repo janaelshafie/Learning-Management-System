@@ -394,10 +394,22 @@ class _InstructorScreenState extends State<InstructorScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
                 );
-              } else if (isInstructor) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => InstructorScreen()),
+              } 
+              // TODO: Uncomment when instructor dashboard is implemented
+              // else if (isInstructor) {
+              //   Navigator.pushReplacement(
+              //     context,
+              //     MaterialPageRoute(builder: (_) => InstructorScreen()),
+              //   );
+              // } 
+              else if (isInstructor) {
+                // Instructor dashboard is not implemented yet
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Instructor dashboard is not implemented yet.'),
+                    duration: Duration(seconds: 3),
+                    backgroundColor: Colors.orange,
+                  ),
                 );
               } else {
                 // Admin users should go to admin dashboard
