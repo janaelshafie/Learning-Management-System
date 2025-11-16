@@ -1,33 +1,23 @@
 package com.asu_lms.lms.Controllers;
 
 import com.asu_lms.lms.Entities.Course;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
-import java.util.*;
-
-import static org.mockito.Mockito.*;
-import com.asu_lms.lms.Services.AuthService;
-import com.asu_lms.lms.Repositories.UserRepository;
+import com.asu_lms.lms.Entities.Department;
 import com.asu_lms.lms.Entities.User;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.web.servlet.MockMvc;
+import com.asu_lms.lms.Repositories.CourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentRepository;
+import com.asu_lms.lms.Repositories.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.junit.jupiter.api.extension.ExtendWith;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.asu_lms.lms.Entities.Announcement;
-import com.asu_lms.lms.Repositories.AnnouncementRepository;
-import com.asu_lms.lms.Entities.Department;
-import com.asu_lms.lms.Repositories.DepartmentRepository;
-import com.asu_lms.lms.Repositories.CourseRepository;
-import com.asu_lms.lms.Repositories.UserRepository;
-import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class DepartmentControllerTest {
 
 
@@ -345,9 +335,10 @@ class DepartmentControllerTest {
 
         List<Course> courses = Arrays.asList(course1, course2, course3, course4);
         when(courseRepository.findAll()).thenReturn(courses);
-        Map<String, Object> result = departmentController.getAllCourses();
+        Map<String, Object> result = departmentController.getAllCourses(null, null);
         assertEquals("success", result.get("status"));
         // Cast the returned field to List and check its size
+        @SuppressWarnings("unchecked")
         List<Course> returnedCourses = (List<Course>) result.get("courses");
         assertEquals(4, returnedCourses.size());
         assertEquals(4, result.get("count"));
@@ -518,6 +509,7 @@ class DepartmentControllerTest {
         Map<String, Object> response = departmentController.getAllInstructors();
 
         assertEquals("success", response.get("status"));
+        @SuppressWarnings("unchecked")
         List<User> resultInstructors = (List<User>) response.get("instructors");
         assertEquals(2, resultInstructors.size());
         assertEquals(2, response.get("count"));
