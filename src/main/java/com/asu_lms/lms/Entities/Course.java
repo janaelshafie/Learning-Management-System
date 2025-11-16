@@ -22,6 +22,9 @@ public class Course {
     @Column(name = "credits", nullable = false)
     private Integer credits;
     
+    @Column(name = "course_type")
+    private String courseType; // 'core' or 'elective' - can be null for general courses
+    
     // Constructors
     public Course() {}
     
@@ -30,6 +33,14 @@ public class Course {
         this.title = title;
         this.description = description;
         this.credits = credits;
+    }
+    
+    public Course(String courseCode, String title, String description, Integer credits, String courseType) {
+        this.courseCode = courseCode;
+        this.title = title;
+        this.description = description;
+        this.credits = credits;
+        this.courseType = courseType;
     }
     
     // Getters and Setters
@@ -71,6 +82,14 @@ public class Course {
     
     public void setCredits(Integer credits) {
         this.credits = credits;
+    }
+    
+    public String getCourseType() {
+        return courseType;
+    }
+    
+    public void setCourseType(String courseType) {
+        this.courseType = courseType;
     }
 }
 

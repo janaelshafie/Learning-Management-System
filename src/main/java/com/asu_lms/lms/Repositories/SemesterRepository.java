@@ -12,3 +12,5 @@ public interface SemesterRepository extends JpaRepository<Semester, Integer> {
     List<Semester> findAllByOrderByStartDateDesc();
 }
 
+
+

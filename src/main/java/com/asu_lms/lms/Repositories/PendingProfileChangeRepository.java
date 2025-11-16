@@ -13,3 +13,5 @@ public interface PendingProfileChangeRepository extends JpaRepository<PendingPro
     List<PendingProfileChange> findByUserIdAndChangeStatus(Integer userId, PendingProfileChange.ChangeStatus status);
 }
 
+
+

@@ -11,3 +11,5 @@ public interface GradeRepository extends JpaRepository<Grade, Integer> {
     Optional<Grade> findByEnrollmentId(Integer enrollmentId);
 }
 
+
+

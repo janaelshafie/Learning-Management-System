@@ -172,8 +172,23 @@ public class DepartmentController {
 
     // Get all courses
     @GetMapping("/courses/all")
-    public Map<String, Object> getAllCourses() {
-        List<Course> courses = courseRepository.findAll();
+    public Map<String, Object> getAllCourses(@RequestParam(required = false) String search,
+                                             @RequestParam(required = false) String courseType) {
+        List<Course> courses;
+        
+        if (search != null && !search.trim().isEmpty()) {
+            // Search by title
+            courses = courseRepository.findByTitleContaining(search);
+        } else {
+            courses = courseRepository.findAll();
+        }
+        
+        // Filter by course type if provided
+        if (courseType != null && !courseType.trim().isEmpty()) {
+            courses = courses.stream()
+                .filter(c -> courseType.equalsIgnoreCase(c.getCourseType()))
+                .collect(java.util.stream.Collectors.toList());
+        }
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
@@ -190,6 +205,7 @@ public class DepartmentController {
         String title = request.get("title");
         String description = request.get("description");
         String creditsStr = request.get("credits");
+        String courseType = request.get("courseType"); // Optional: 'core' or 'elective'
         
         Map<String, String> response = new HashMap<>();
         
@@ -203,7 +219,12 @@ public class DepartmentController {
             
             Integer credits = Integer.parseInt(creditsStr);
             
-            Course course = new Course(courseCode, title, description, credits);
+            Course course;
+            if (courseType != null && !courseType.trim().isEmpty()) {
+                course = new Course(courseCode, title, description, credits, courseType);
+            } else {
+                course = new Course(courseCode, title, description, credits);
+            }
             courseRepository.save(course);
             
             response.put("status", "success");
@@ -225,6 +246,7 @@ public class DepartmentController {
         String title = request.get("title");
         String description = request.get("description");
         String creditsStr = request.get("credits");
+        String courseType = request.get("courseType"); // Optional: 'core' or 'elective'
         
         Map<String, String> response = new HashMap<>();
         
@@ -251,6 +273,10 @@ public class DepartmentController {
             course.setTitle(title);
             course.setDescription(description);
             course.setCredits(Integer.parseInt(creditsStr));
+            
+            if (courseType != null) {
+                course.setCourseType(courseType.isEmpty() ? null : courseType);
+            }
             
             courseRepository.save(course);
             
@@ -311,4 +337,6 @@ public class DepartmentController {
         return response;
     }
 }
+
+
 

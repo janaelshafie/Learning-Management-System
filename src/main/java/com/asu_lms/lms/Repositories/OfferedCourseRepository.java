@@ -13,3 +13,5 @@ public interface OfferedCourseRepository extends JpaRepository<OfferedCourse, In
     Optional<OfferedCourse> findByOfferedCourseId(Integer offeredCourseId);
 }
 
+
+
