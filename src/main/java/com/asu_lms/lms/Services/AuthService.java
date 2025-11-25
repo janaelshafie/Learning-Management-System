@@ -12,6 +12,9 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordService passwordService;
 
     public String login(String email, String password) {
         // Trim the email to handle any whitespace
@@ -26,8 +29,8 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            // Check password (case sensitive comparison)
-            if (user.getPasswordHash().equals(password)) {
+            // Check password using BCrypt verification
+            if (passwordService.verifyPassword(password, user.getPasswordHash())) {
                 // Check account status
                 if ("active".equals(user.getAccountStatus())) {
                     return user.getRole();
@@ -62,6 +65,9 @@ public class AuthService {
                 return "National ID already exists";
             }
 
+            // Hash the password before storing
+            String hashedPassword = passwordService.hashPassword(password);
+            
             // For parents, validate student national ID exists
             if ("parent".equals(role) && studentNationalId != null && !studentNationalId.trim().isEmpty()) {
                 Optional<User> studentOpt = userRepository.findByNationalId(studentNationalId);
@@ -69,7 +75,7 @@ public class AuthService {
                     // Student doesn't exist, create parent with rejected status
                     User newUser = new User(nationalId, name, email, 
                         (officialMail != null && !officialMail.trim().isEmpty()) ? officialMail : email, 
-                        phone, location, password, role);
+                        phone, location, hashedPassword, role);
                     newUser.setAccountStatus("rejected"); // Rejected because student doesn't exist
                     userRepository.save(newUser);
                     return "success"; // Still return success but with rejected status
@@ -79,7 +85,7 @@ public class AuthService {
             // Create new user with pending status (requires admin approval)
             User newUser = new User(nationalId, name, email, 
                 (officialMail != null && !officialMail.trim().isEmpty()) ? officialMail : email, 
-                phone, location, password, role);
+                phone, location, hashedPassword, role);
             newUser.setAccountStatus("pending"); // All accounts need admin approval
             userRepository.save(newUser);
             

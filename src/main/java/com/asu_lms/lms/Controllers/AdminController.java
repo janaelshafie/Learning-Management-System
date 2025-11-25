@@ -22,6 +22,7 @@ import com.asu_lms.lms.Repositories.OfferedCourseRepository;
 import com.asu_lms.lms.Repositories.CourseRepository;
 import com.asu_lms.lms.Repositories.DepartmentRepository;
 import com.asu_lms.lms.Repositories.SemesterRepository;
+import com.asu_lms.lms.Services.PasswordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +39,9 @@ public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordService passwordService;
     
     @Autowired
     private InstructorRepository instructorRepository;
@@ -337,7 +341,8 @@ public class AdminController {
         try {
             // Password changes are allowed immediately for all users
             if (request.get("password") != null && !request.get("password").trim().isEmpty()) {
-                user.setPasswordHash(request.get("password").trim());
+                String hashedPassword = passwordService.hashPassword(request.get("password").trim());
+                user.setPasswordHash(hashedPassword);
                 userRepository.save(user);
             }
 
@@ -452,7 +457,8 @@ public class AdminController {
             }
 
             if (request.get("password") != null && !request.get("password").trim().isEmpty()) {
-                user.setPasswordHash(request.get("password").trim());
+                String hashedPassword = passwordService.hashPassword(request.get("password").trim());
+                user.setPasswordHash(hashedPassword);
             }
 
             userRepository.save(user);
@@ -854,7 +860,8 @@ public class AdminController {
             newUser.setPhone(phone != null ? phone.trim() : "");
             newUser.setLocation(location != null ? location.trim() : "");
             newUser.setNationalId(nationalId.trim());
-            newUser.setPasswordHash(password.trim()); // In real app, hash this password
+            String hashedPassword = passwordService.hashPassword(password.trim());
+            newUser.setPasswordHash(hashedPassword);
             newUser.setRole(role.trim());
             newUser.setAccountStatus("active"); // Admin-created users are active by default
             
