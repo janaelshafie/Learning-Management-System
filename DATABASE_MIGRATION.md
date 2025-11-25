@@ -123,3 +123,8 @@ POST /api/admin/courses/prerequisites/add
 - Prerequisites are validated to prevent circular dependencies (e.g., A → B → C → A)
 - Self-referencing prerequisites are prevented (a course cannot be a prerequisite of itself)
 
+
+
+
+
+
