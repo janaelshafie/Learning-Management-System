@@ -22,3 +22,5 @@ public interface DepartmentCourseRepository extends JpaRepository<DepartmentCour
     boolean existsByDepartmentIdAndCourseId(Integer departmentId, Integer courseId);
 }
 
+
+
