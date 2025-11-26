@@ -15,6 +15,9 @@ public class Instructor {
     @Column(name = "office_hours")
     private String officeHours;
     
+    @Column(name = "department_id")
+    private Integer departmentId;
+    
     // Constructors
     public Instructor() {}
     
@@ -22,6 +25,13 @@ public class Instructor {
         this.instructorId = instructorId;
         this.instructorType = instructorType;
         this.officeHours = officeHours;
+    }
+    
+    public Instructor(Integer instructorId, String instructorType, String officeHours, Integer departmentId) {
+        this.instructorId = instructorId;
+        this.instructorType = instructorType;
+        this.officeHours = officeHours;
+        this.departmentId = departmentId;
     }
     
     // Getters and Setters
@@ -47,6 +57,14 @@ public class Instructor {
     
     public void setOfficeHours(String officeHours) {
         this.officeHours = officeHours;
+    }
+    
+    public Integer getDepartmentId() {
+        return departmentId;
+    }
+    
+    public void setDepartmentId(Integer departmentId) {
+        this.departmentId = departmentId;
     }
 }
 

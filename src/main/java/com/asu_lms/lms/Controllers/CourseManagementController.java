@@ -2,6 +2,7 @@ package com.asu_lms.lms.Controllers;
 
 import com.asu_lms.lms.Entities.*;
 import com.asu_lms.lms.Repositories.*;
+import com.asu_lms.lms.Services.CourseManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
@@ -22,6 +23,24 @@ public class CourseManagementController {
     
     @Autowired
     private DepartmentRepository departmentRepository;
+    
+    @Autowired
+    private CourseManagementService courseManagementService;
+    
+    @Autowired
+    private OfferedCourseRepository offeredCourseRepository;
+    
+    @Autowired
+    private OfferedCourseInstructorRepository offeredCourseInstructorRepository;
+    
+    @Autowired
+    private SemesterRepository semesterRepository;
+    
+    @Autowired
+    private InstructorRepository instructorRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     // ========== PREREQUISITE MANAGEMENT ==========
     
@@ -366,6 +385,8 @@ public class CourseManagementController {
                 return response;
             }
             
+            List<Map<String, Object>> coursesList = new ArrayList<>();
+            
             List<DepartmentCourse> departmentCourses;
             if (courseType != null && !courseType.trim().isEmpty()) {
                 if ("core".equals(courseType)) {
@@ -379,9 +400,25 @@ public class CourseManagementController {
                 departmentCourses = departmentCourseRepository.findByDepartmentId(departmentId);
             }
             
+            // Convert to course objects
+            for (DepartmentCourse dc : departmentCourses) {
+                Optional<Course> courseOpt = courseRepository.findById(dc.getCourseId());
+                if (courseOpt.isPresent()) {
+                    Course course = courseOpt.get();
+                    Map<String, Object> courseData = new HashMap<>();
+                    courseData.put("courseId", course.getCourseId());
+                    courseData.put("courseCode", course.getCourseCode());
+                    courseData.put("title", course.getTitle());
+                    courseData.put("description", course.getDescription());
+                    courseData.put("credits", course.getCredits());
+                    courseData.put("courseType", dc.getCourseType());
+                    coursesList.add(courseData);
+                }
+            }
+            
             response.put("status", "success");
-            response.put("courses", departmentCourses);
-            response.put("count", departmentCourses.size());
+            response.put("courses", coursesList);
+            response.put("count", coursesList.size());
             
         } catch (Exception e) {
             response.put("status", "error");
@@ -401,6 +438,175 @@ public class CourseManagementController {
     @GetMapping("/departments/{departmentId}/elective-courses")
     public Map<String, Object> getElectiveCourses(@PathVariable Integer departmentId) {
         return getDepartmentCourses(departmentId, "elective");
+    }
+    
+    // ========== COURSE OFFERING MANAGEMENT (NEW) ==========
+    
+    // Get all departments
+    @GetMapping("/departments")
+    public Map<String, Object> getAllDepartments() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Map<String, Object>> departments = courseManagementService.getAllDepartments();
+            response.put("status", "success");
+            response.put("departments", departments);
+            response.put("count", departments.size());
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching departments: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Get all semesters
+    @GetMapping("/semesters")
+    public Map<String, Object> getSemesters() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Semester> semesters = semesterRepository.findAll();
+            List<Map<String, Object>> semesterList = new ArrayList<>();
+            
+            for (Semester sem : semesters) {
+                Map<String, Object> semData = new HashMap<>();
+                semData.put("semesterId", sem.getSemesterId());
+                semData.put("name", sem.getName());
+                semData.put("startDate", sem.getStartDate());
+                semData.put("endDate", sem.getEndDate());
+                semData.put("registrationOpen", sem.getRegistrationOpen());
+                semesterList.add(semData);
+            }
+            
+            response.put("status", "success");
+            response.put("semesters", semesterList);
+            response.put("count", semesterList.size());
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching semesters: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Get instructors for a specific department (filtered by department)
+    @GetMapping("/departments/{departmentId}/instructors")
+    public Map<String, Object> getInstructorsByDepartment(@PathVariable Integer departmentId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Optional<Department> deptOpt = departmentRepository.findById(departmentId);
+            if (!deptOpt.isPresent()) {
+                response.put("status", "error");
+                response.put("message", "Department not found");
+                return response;
+            }
+            
+            List<Map<String, Object>> instructors = courseManagementService.getInstructorsByDepartment(departmentId);
+            response.put("status", "success");
+            response.put("instructors", instructors);
+            response.put("count", instructors.size());
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching instructors: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Get offered courses for a specific semester and department
+    @GetMapping("/semesters/{semesterId}/departments/{departmentId}/offered-courses")
+    public Map<String, Object> getOfferedCourses(
+            @PathVariable Integer semesterId, 
+            @PathVariable Integer departmentId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Map<String, Object>> offeredCourses = courseManagementService
+                .getOfferedCoursesBySemester(semesterId, departmentId);
+            response.put("status", "success");
+            response.put("offeredCourses", offeredCourses);
+            response.put("count", offeredCourses.size());
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching offered courses: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Create an offered course (make a course available in a semester)
+    @PostMapping("/offered-courses/create")
+    public Map<String, Object> createOfferedCourse(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Object courseIdObj = request.get("courseId");
+            Object semesterIdObj = request.get("semesterId");
+            
+            Integer courseId = null;
+            Integer semesterId = null;
+            
+            if (courseIdObj instanceof String) {
+                courseId = Integer.parseInt((String) courseIdObj);
+            } else {
+                courseId = (Integer) courseIdObj;
+            }
+            
+            if (semesterIdObj instanceof String) {
+                semesterId = Integer.parseInt((String) semesterIdObj);
+            } else {
+                semesterId = (Integer) semesterIdObj;
+            }
+            
+            return courseManagementService.createOfferedCourse(courseId, semesterId);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error creating offered course: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Assign an instructor to an offered course
+    // This validates that the instructor is compatible with the course's department
+    @PostMapping("/offered-courses/{offeredCourseId}/assign-instructor")
+    public Map<String, Object> assignInstructor(
+        @PathVariable Integer offeredCourseId,
+        @RequestBody Map<String, Object> request
+    ) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Object instructorIdObj = request.get("instructorId");
+            Object departmentIdObj = request.get("departmentId");
+            
+            Integer instructorId = null;
+            Integer departmentId = null;
+            
+            if (instructorIdObj instanceof String) {
+                instructorId = Integer.parseInt((String) instructorIdObj);
+            } else {
+                instructorId = (Integer) instructorIdObj;
+            }
+            
+            if (departmentIdObj instanceof String) {
+                departmentId = Integer.parseInt((String) departmentIdObj);
+            } else {
+                departmentId = (Integer) departmentIdObj;
+            }
+            
+            return courseManagementService.assignInstructorToCourse(offeredCourseId, instructorId, departmentId);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error assigning instructor: " + e.getMessage());
+        }
+        return response;
+    }
+    
+    // Remove an offered course
+    @DeleteMapping("/offered-courses/{offeredCourseId}")
+    public Map<String, Object> removeOfferedCourse(@PathVariable Integer offeredCourseId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            return courseManagementService.removeOfferedCourse(offeredCourseId);
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error removing offered course: " + e.getMessage());
+        }
+        return response;
     }
 }
 

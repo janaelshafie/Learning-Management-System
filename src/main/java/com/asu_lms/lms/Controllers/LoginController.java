@@ -48,11 +48,11 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public Map<String , String> login(@RequestBody Map<String , String> request) {
+    public Map<String , Object> login(@RequestBody Map<String , String> request) {
         String email = request.get("email");
         String password = request.get("password");
         
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         
         // Basic validation
         if (email == null || email.trim().isEmpty()) {
@@ -78,6 +78,16 @@ public class LoginController {
         } else if (!result.equals("invalid")) {
             response.put("status", "success");
             response.put("role", result);
+            
+            // Get user ID
+            Optional<User> userOpt = userRepository.findByEmail(email.trim());
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByOfficialMail(email.trim());
+            }
+            
+            if (userOpt.isPresent()) {
+                response.put("userId", userOpt.get().getUserId());
+            }
         } else {
             response.put("status", "error");
             response.put("message", "Invalid email or password");
