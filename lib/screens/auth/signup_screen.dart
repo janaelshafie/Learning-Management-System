@@ -15,15 +15,18 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _officialMailController = TextEditingController();
-  final TextEditingController _studentNationalIdController = TextEditingController();
+  final TextEditingController _studentNationalIdController =
+      TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String _selectedRole = 'instructor'; // Default to instructor, students can't signup
+  String _selectedRole =
+      'instructor'; // Default to instructor, students can't signup
 
   final ApiService _apiService = ApiService();
 
@@ -48,12 +51,16 @@ class _SignupScreenState extends State<SignupScreen> {
       'name': _nameController.text.trim(),
       'nationalId': _nationalIdController.text.trim(),
       'email': _emailController.text.trim(),
-      'officialMail': _selectedRole == 'parent' ? _emailController.text.trim() : _officialMailController.text.trim(),
+      'officialMail': _selectedRole == 'parent'
+          ? _emailController.text.trim()
+          : _officialMailController.text.trim(),
       'phone': _phoneController.text.trim(),
       'location': _locationController.text.trim(),
       'password': _passwordController.text.trim(),
       'role': _selectedRole,
-      'studentNationalId': _selectedRole == 'parent' ? _studentNationalIdController.text.trim() : null,
+      'studentNationalId': _selectedRole == 'parent'
+          ? _studentNationalIdController.text.trim()
+          : null,
     };
 
     final result = await _apiService.signup(signupData);
@@ -61,11 +68,13 @@ class _SignupScreenState extends State<SignupScreen> {
     if (result['status'] == 'success') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Account created successfully! Please wait for admin approval.'),
+          content: Text(
+            'Account created successfully! Please wait for admin approval.',
+          ),
           duration: Duration(seconds: 5),
         ),
       );
-      
+
       // Navigate back to login page
       Navigator.pushReplacement(
         context,
@@ -80,7 +89,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
@@ -117,7 +125,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
+
                 // Role Selection
                 Container(
                   width: double.infinity,
@@ -127,13 +135,16 @@ class _SignupScreenState extends State<SignupScreen> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: DropdownButtonFormField<String>(
-                    value: _selectedRole,
+                    initialValue: _selectedRole,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       labelText: 'Role',
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'instructor', child: Text('Instructor')),
+                      DropdownMenuItem(
+                        value: 'instructor',
+                        child: Text('Instructor'),
+                      ),
                       DropdownMenuItem(value: 'admin', child: Text('Admin')),
                       DropdownMenuItem(value: 'parent', child: Text('Parent')),
                     ],
@@ -150,9 +161,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Admin Approval Notice
                 Container(
                   width: double.infinity,
@@ -178,9 +189,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Name Field
                 _buildTextField(
                   controller: _nameController,
@@ -192,9 +203,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // National ID Field
                 _buildTextField(
                   controller: _nationalIdController,
@@ -206,9 +217,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // Email Field
                 _buildTextField(
                   controller: _emailController,
@@ -217,15 +228,17 @@ class _SignupScreenState extends State<SignupScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // Official Mail Field (hidden for parents)
                 if (_selectedRole != 'parent')
                   _buildTextField(
@@ -238,10 +251,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       return null;
                     },
                   ),
-                
-                if (_selectedRole != 'parent')
-                  const SizedBox(height: 15),
-                
+
+                if (_selectedRole != 'parent') const SizedBox(height: 15),
+
                 // Student National ID Field (only for parents)
                 if (_selectedRole == 'parent')
                   _buildTextField(
@@ -254,26 +266,25 @@ class _SignupScreenState extends State<SignupScreen> {
                       return null;
                     },
                   ),
-                
-                if (_selectedRole == 'parent')
-                  const SizedBox(height: 15),
-                
+
+                if (_selectedRole == 'parent') const SizedBox(height: 15),
+
                 // Phone Field
                 _buildTextField(
                   controller: _phoneController,
                   hintText: "Phone Number (Optional)",
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // Location Field
                 _buildTextField(
                   controller: _locationController,
                   hintText: "Location (Optional)",
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // Password Field
                 _buildTextField(
                   controller: _passwordController,
@@ -281,7 +292,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   obscureText: _obscurePassword,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -297,9 +310,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 15),
-                
+
                 // Confirm Password Field
                 _buildTextField(
                   controller: _confirmPasswordController,
@@ -307,7 +320,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   obscureText: _obscureConfirmPassword,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -326,9 +341,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Signup Button
                 SizedBox(
                   width: double.infinity,
@@ -343,16 +358,13 @@ class _SignupScreenState extends State<SignupScreen> {
                     onPressed: _handleSignup,
                     child: const Text(
                       "Create Account",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Back to Login
                 TextButton(
                   onPressed: () => Navigator.pop(context),

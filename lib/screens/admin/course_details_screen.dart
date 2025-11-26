@@ -56,7 +56,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     });
 
     try {
-      final result = await _apiService.getCoursePrerequisites(widget.course['courseId']);
+      final result = await _apiService.getCoursePrerequisites(
+        widget.course['courseId'],
+      );
       if (result['status'] == 'success') {
         setState(() {
           _prerequisites = result['prerequisites'] ?? [];
@@ -80,17 +82,22 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     if (courseCode.startsWith('ASU')) return 'University Requirements';
     if (courseCode.startsWith('ENG')) return 'Faculty Requirements';
     if (courseCode.startsWith('ARC')) return 'Architecture Engineering';
-    if (courseCode.startsWith('CEI')) return 'Irrigation and Hydraulics Engineering';
+    if (courseCode.startsWith('CEI'))
+      return 'Irrigation and Hydraulics Engineering';
     if (courseCode.startsWith('CEP')) return 'Public Works Engineering';
     if (courseCode.startsWith('CES')) return 'Structural Engineering';
     if (courseCode.startsWith('CSE')) return 'Computer and Systems Engineering';
-    if (courseCode.startsWith('ECE')) return 'Electronics and Communication Engineering';
-    if (courseCode.startsWith('EPM')) return 'Electrical Power and Machines Engineering';
+    if (courseCode.startsWith('ECE'))
+      return 'Electronics and Communication Engineering';
+    if (courseCode.startsWith('EPM'))
+      return 'Electrical Power and Machines Engineering';
     if (courseCode.startsWith('MEA')) return 'Automotive Engineering';
     if (courseCode.startsWith('MCT')) return 'Mechatronics Engineering';
-    if (courseCode.startsWith('MDP')) return 'Design and Production Engineering';
+    if (courseCode.startsWith('MDP'))
+      return 'Design and Production Engineering';
     if (courseCode.startsWith('MEP')) return 'Mechanical Power Engineering';
-    if (courseCode.startsWith('PHM')) return 'Engineering Physics and Mathematics';
+    if (courseCode.startsWith('PHM'))
+      return 'Engineering Physics and Mathematics';
     if (courseCode.startsWith('UPL')) return 'Urban Design and Planning';
     return 'General';
   }
@@ -100,17 +107,26 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     if (department == 'Faculty Requirements') return Colors.blue;
     if (department.contains('Computer')) return Colors.green;
     if (department.contains('Architecture')) return Colors.orange;
-    if (department.contains('Civil') || department.contains('Structural')) return Colors.brown;
-    if (department.contains('Electrical') || department.contains('Electronics')) return Colors.amber;
-    if (department.contains('Mechanical') || department.contains('Power')) return Colors.red;
+    if (department.contains('Civil') || department.contains('Structural'))
+      return Colors.brown;
+    if (department.contains('Electrical') || department.contains('Electronics'))
+      return Colors.amber;
+    if (department.contains('Mechanical') || department.contains('Power'))
+      return Colors.red;
     return Colors.grey;
   }
 
   Future<void> _showEditDialog() async {
-    final courseCodeController = TextEditingController(text: widget.course['courseCode']);
+    final courseCodeController = TextEditingController(
+      text: widget.course['courseCode'],
+    );
     final titleController = TextEditingController(text: widget.course['title']);
-    final descriptionController = TextEditingController(text: widget.course['description'] ?? '');
-    final creditsController = TextEditingController(text: widget.course['credits'].toString());
+    final descriptionController = TextEditingController(
+      text: widget.course['description'] ?? '',
+    );
+    final creditsController = TextEditingController(
+      text: widget.course['credits'].toString(),
+    );
     String? selectedCourseType = widget.course['courseType'];
 
     await showDialog(
@@ -142,12 +158,17 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCourseType,
-                  decoration: const InputDecoration(labelText: 'Course Type (Optional)'),
+                  initialValue: selectedCourseType,
+                  decoration: const InputDecoration(
+                    labelText: 'Course Type (Optional)',
+                  ),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('None')),
                     DropdownMenuItem(value: 'core', child: Text('Core')),
-                    DropdownMenuItem(value: 'elective', child: Text('Elective')),
+                    DropdownMenuItem(
+                      value: 'elective',
+                      child: Text('Elective'),
+                    ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -169,7 +190,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                     titleController.text.trim().isEmpty ||
                     creditsController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all required fields')),
+                    const SnackBar(
+                      content: Text('Please fill all required fields'),
+                    ),
                   );
                   return;
                 }
@@ -186,20 +209,24 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                 Navigator.of(context).pop();
 
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                   // Update the course data
-                  widget.course['courseCode'] = courseCodeController.text.trim();
+                  widget.course['courseCode'] = courseCodeController.text
+                      .trim();
                   widget.course['title'] = titleController.text.trim();
-                  widget.course['description'] = descriptionController.text.trim();
-                  widget.course['credits'] = int.parse(creditsController.text.trim());
+                  widget.course['description'] = descriptionController.text
+                      .trim();
+                  widget.course['credits'] = int.parse(
+                    creditsController.text.trim(),
+                  );
                   widget.course['courseType'] = selectedCourseType;
                   setState(() {});
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                 }
               },
               child: const Text('Update'),
@@ -212,24 +239,28 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
 
   Future<void> _showAddPrerequisiteDialog() async {
     if (_isLoadingCourses) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Loading courses...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Loading courses...')));
       return;
     }
 
     // Filter out courses that are already prerequisites and the current course
     final currentCourseId = widget.course['courseId'];
-    final existingPrereqIds = _prerequisites.map((p) => p['prereqCourseId']).toList();
-    
+    final existingPrereqIds = _prerequisites
+        .map((p) => p['prereqCourseId'])
+        .toList();
+
     final availableCourses = _allCourses.where((course) {
       return course['courseId'] != currentCourseId &&
-             !existingPrereqIds.contains(course['courseId']);
+          !existingPrereqIds.contains(course['courseId']);
     }).toList();
 
     if (availableCourses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No available courses to add as prerequisite')),
+        const SnackBar(
+          content: Text('No available courses to add as prerequisite'),
+        ),
       );
       return;
     }
@@ -253,7 +284,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                     items: availableCourses.map((course) {
                       return DropdownMenuItem<int>(
                         value: course['courseId'],
-                        child: Text('${course['courseCode']} - ${course['title']}'),
+                        child: Text(
+                          '${course['courseCode']} - ${course['title']}',
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -291,19 +324,21 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       );
 
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
         _loadPrerequisites();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Error adding prerequisite')),
+          SnackBar(
+            content: Text(result['message'] ?? 'Error adding prerequisite'),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -312,7 +347,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Prerequisite'),
-        content: const Text('Are you sure you want to remove this prerequisite?'),
+        content: const Text(
+          'Are you sure you want to remove this prerequisite?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -335,19 +372,21 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
         );
 
         if (result['status'] == 'success') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'])),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
           _loadPrerequisites();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Error removing prerequisite')),
+            SnackBar(
+              content: Text(result['message'] ?? 'Error removing prerequisite'),
+            ),
           );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -357,7 +396,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Course'),
-        content: Text('Are you sure you want to delete ${widget.course['courseCode']}?'),
+        content: Text(
+          'Are you sure you want to delete ${widget.course['courseCode']}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -374,23 +415,25 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
 
     if (confirmed == true) {
       final result = await _apiService.deleteCourse(widget.course['courseId']);
-      
+
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
         Navigator.of(context).pop(true); // Return true to indicate deletion
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final department = _getDepartmentFromCourseCode(widget.course['courseCode']);
+    final department = _getDepartmentFromCourseCode(
+      widget.course['courseCode'],
+    );
     final departmentColor = _getDepartmentColor(department);
 
     return Scaffold(
@@ -430,7 +473,11 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                             color: departmentColor.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.book, color: departmentColor, size: 32),
+                          child: Icon(
+                            Icons.book,
+                            color: departmentColor,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -483,13 +530,16 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                                   : Colors.orange[700],
                             ),
                             label: Text(
-                              widget.course['courseType'] == 'core' ? 'CORE' : 'ELECTIVE',
+                              widget.course['courseType'] == 'core'
+                                  ? 'CORE'
+                                  : 'ELECTIVE',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
                             ),
-                            backgroundColor: widget.course['courseType'] == 'core'
+                            backgroundColor:
+                                widget.course['courseType'] == 'core'
                                 ? Colors.green[50]
                                 : Colors.orange[50],
                             labelStyle: TextStyle(
@@ -629,7 +679,10 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           color: Colors.orange[50],
                           child: ListTile(
-                            leading: Icon(Icons.arrow_forward, color: Colors.orange[700]),
+                            leading: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.orange[700],
+                            ),
                             title: Text(
                               prereqCourse?['courseCode'] ?? 'Unknown',
                               style: const TextStyle(
@@ -642,13 +695,17 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                               style: const TextStyle(fontSize: 14),
                             ),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () => _removePrerequisite(prereq['prereqCourseId']),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                              onPressed: () =>
+                                  _removePrerequisite(prereq['prereqCourseId']),
                               tooltip: 'Remove Prerequisite',
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                   ],
                 ),
               ),
@@ -659,4 +716,3 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     );
   }
 }
-

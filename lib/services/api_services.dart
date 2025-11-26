@@ -180,7 +180,9 @@ class ApiService {
 
   // Profile Changes Management Methods
   Future<Map<String, dynamic>> getPendingProfileChanges() async {
-    final url = Uri.parse('http://localhost:8080/api/admin/pending-profile-changes');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/pending-profile-changes',
+    );
 
     try {
       final response = await http.get(url);
@@ -197,8 +199,13 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> approveProfileChange(int changeId, int adminUserId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/approve-profile-change');
+  Future<Map<String, dynamic>> approveProfileChange(
+    int changeId,
+    int adminUserId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/approve-profile-change',
+    );
 
     try {
       final response = await http.post(
@@ -223,8 +230,13 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> rejectProfileChange(int changeId, int adminUserId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/reject-profile-change');
+  Future<Map<String, dynamic>> rejectProfileChange(
+    int changeId,
+    int adminUserId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/reject-profile-change',
+    );
 
     try {
       final response = await http.post(
@@ -268,7 +280,9 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> createDepartment(Map<String, dynamic> departmentData) async {
+  Future<Map<String, dynamic>> createDepartment(
+    Map<String, dynamic> departmentData,
+  ) async {
     final url = Uri.parse('http://localhost:8080/api/admin/departments/create');
 
     try {
@@ -291,7 +305,9 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateDepartment(Map<String, dynamic> departmentData) async {
+  Future<Map<String, dynamic>> updateDepartment(
+    Map<String, dynamic> departmentData,
+  ) async {
     final url = Uri.parse('http://localhost:8080/api/admin/departments/update');
 
     try {
@@ -339,7 +355,9 @@ class ApiService {
 
   // Course Management Methods
   Future<Map<String, dynamic>> getAllCourses() async {
-    final url = Uri.parse('http://localhost:8080/api/admin/departments/courses/all');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/departments/courses/all',
+    );
 
     try {
       final response = await http.get(url);
@@ -356,8 +374,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> createCourse(Map<String, dynamic> courseData) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/departments/courses/create');
+  Future<Map<String, dynamic>> createCourse(
+    Map<String, dynamic> courseData,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/departments/courses/create',
+    );
 
     try {
       final response = await http.post(
@@ -379,8 +401,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateCourse(Map<String, dynamic> courseData) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/departments/courses/update');
+  Future<Map<String, dynamic>> updateCourse(
+    Map<String, dynamic> courseData,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/departments/courses/update',
+    );
 
     try {
       final response = await http.post(
@@ -403,7 +429,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> deleteCourse(int courseId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/departments/courses/delete');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/departments/courses/delete',
+    );
 
     try {
       final response = await http.post(
@@ -426,7 +454,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getCoursePrerequisites(int courseId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/$courseId/prerequisites');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/$courseId/prerequisites',
+    );
 
     try {
       final response = await http.get(url);
@@ -443,8 +473,13 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> addPrerequisite(int courseId, int prereqCourseId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/prerequisites/add');
+  Future<Map<String, dynamic>> addPrerequisite(
+    int courseId,
+    int prereqCourseId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/prerequisites/add',
+    );
 
     try {
       final response = await http.post(
@@ -469,8 +504,13 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> removePrerequisite(int courseId, int prereqCourseId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/prerequisites/remove');
+  Future<Map<String, dynamic>> removePrerequisite(
+    int courseId,
+    int prereqCourseId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/prerequisites/remove',
+    );
 
     try {
       final response = await http.post(
@@ -502,7 +542,9 @@ class ApiService {
     int? capacity,
     String? eligibilityRequirements,
   }) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/link');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/link',
+    );
 
     try {
       final body = {
@@ -513,7 +555,8 @@ class ApiService {
       if (capacity != null) {
         body['capacity'] = capacity.toString();
       }
-      if (eligibilityRequirements != null && eligibilityRequirements.isNotEmpty) {
+      if (eligibilityRequirements != null &&
+          eligibilityRequirements.isNotEmpty) {
         body['eligibilityRequirements'] = eligibilityRequirements;
       }
 
@@ -536,8 +579,13 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> unlinkCourseFromDepartment(int departmentId, int courseId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/unlink');
+  Future<Map<String, dynamic>> unlinkCourseFromDepartment(
+    int departmentId,
+    int courseId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/unlink',
+    );
 
     try {
       final response = await http.post(
@@ -562,8 +610,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getDepartmentCourses(int departmentId, {String? courseType}) async {
-    String urlString = 'http://localhost:8080/api/admin/courses/departments/$departmentId/courses';
+  Future<Map<String, dynamic>> getDepartmentCourses(
+    int departmentId, {
+    String? courseType,
+  }) async {
+    String urlString =
+        'http://localhost:8080/api/admin/courses/departments/$departmentId/courses';
     if (courseType != null && courseType.isNotEmpty) {
       urlString += '?courseType=$courseType';
     }
@@ -585,7 +637,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getCoreCourses(int departmentId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/$departmentId/core-courses');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/$departmentId/core-courses',
+    );
 
     try {
       final response = await http.get(url);
@@ -603,7 +657,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getElectiveCourses(int departmentId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/courses/departments/$departmentId/elective-courses');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/$departmentId/elective-courses',
+    );
 
     try {
       final response = await http.get(url);
@@ -621,7 +677,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getAllInstructors() async {
-    final url = Uri.parse('http://localhost:8080/api/admin/departments/instructors');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/departments/instructors',
+    );
 
     try {
       final response = await http.get(url);
@@ -639,8 +697,12 @@ class ApiService {
   }
 
   // Announcement Management Methods
-  Future<Map<String, dynamic>> createAnnouncement(Map<String, String> announcementData) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/create-announcement');
+  Future<Map<String, dynamic>> createAnnouncement(
+    Map<String, String> announcementData,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/create-announcement',
+    );
     try {
       final response = await http.post(
         url,
@@ -675,7 +737,9 @@ class ApiService {
   }
 
   Future<List<dynamic>> getAnnouncementsForUserType(String userType) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/announcements/$userType');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/announcements/$userType',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -688,8 +752,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> updateAnnouncement(Map<String, String> announcementData) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/update-announcement');
+  Future<Map<String, dynamic>> updateAnnouncement(
+    Map<String, String> announcementData,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/update-announcement',
+    );
     try {
       final response = await http.post(
         url,
@@ -710,7 +778,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> deleteAnnouncement(String announcementId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/delete-announcement');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/delete-announcement',
+    );
     try {
       final response = await http.post(
         url,
@@ -731,7 +801,9 @@ class ApiService {
   }
 
   Future<List<dynamic>> getPendingProfileChangesForUser(int userId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/pending-profile-changes/$userId');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/pending-profile-changes/$userId',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -748,7 +820,9 @@ class ApiService {
 
   // Get course announcements for a specific course
   Future<List<dynamic>> getCourseAnnouncements(int offeredCourseId) async {
-    final url = Uri.parse('http://localhost:8080/api/course/announcements/$offeredCourseId');
+    final url = Uri.parse(
+      'http://localhost:8080/api/course/announcements/$offeredCourseId',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -765,7 +839,9 @@ class ApiService {
 
   // Get course materials for a specific course
   Future<List<dynamic>> getCourseMaterials(int offeredCourseId) async {
-    final url = Uri.parse('http://localhost:8080/api/course/materials/$offeredCourseId');
+    final url = Uri.parse(
+      'http://localhost:8080/api/course/materials/$offeredCourseId',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -805,7 +881,7 @@ class ApiService {
     final url = Uri.parse('http://localhost:8080/api/auth/get-user-by-email');
     print('API: getUserByEmail called with email: $email');
     print('API: URL: $url');
-    
+
     try {
       final response = await http.post(
         url,
@@ -814,7 +890,7 @@ class ApiService {
       );
       print('API: Response status code: ${response.statusCode}');
       print('API: Response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final decodedResponse = jsonDecode(response.body);
         print('API: Decoded response: $decodedResponse');
@@ -833,7 +909,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getStudentData(int userId) async {
-    final url = Uri.parse('http://localhost:8080/api/admin/student-data/$userId');
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/student-data/$userId',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -874,7 +952,9 @@ class ApiService {
   }
 
   // Replace existing parent with new parent
-  Future<Map<String, dynamic>> replaceParent(Map<String, dynamic> parentData) async {
+  Future<Map<String, dynamic>> replaceParent(
+    Map<String, dynamic> parentData,
+  ) async {
     final url = Uri.parse('http://localhost:8080/api/admin/replace-parent');
 
     try {
@@ -884,6 +964,189 @@ class ApiService {
         body: jsonEncode(parentData),
       );
 
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // ========== COURSE MANAGEMENT API METHODS ==========
+
+  // Get all departments
+  Future<Map<String, dynamic>> getDepartments() async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Get all semesters
+  Future<Map<String, dynamic>> getSemesters() async {
+    final url = Uri.parse('http://localhost:8080/api/admin/courses/semesters');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Get courses for a department
+  Future<Map<String, dynamic>> getCoursesByDepartment(int departmentId) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/$departmentId/courses',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Get instructors for a department
+  Future<Map<String, dynamic>> getInstructorsByDepartment(
+    int departmentId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/departments/$departmentId/instructors',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Get offered courses for a semester and department
+  Future<Map<String, dynamic>> getOfferedCourses(
+    int semesterId,
+    int departmentId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/semesters/$semesterId/departments/$departmentId/offered-courses',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Create an offered course
+  Future<Map<String, dynamic>> createOfferedCourse(
+    int courseId,
+    int semesterId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/offered-courses/create',
+    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'courseId': courseId, 'semesterId': semesterId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Assign instructor to an offered course
+  Future<Map<String, dynamic>> assignInstructor(
+    int offeredCourseId,
+    int instructorId,
+    int departmentId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/offered-courses/$offeredCourseId/assign-instructor',
+    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'instructorId': instructorId,
+          'departmentId': departmentId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Remove an offered course
+  Future<Map<String, dynamic>> removeOfferedCourse(int offeredCourseId) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/courses/offered-courses/$offeredCourseId',
+    );
+    try {
+      final response = await http.delete(url);
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {

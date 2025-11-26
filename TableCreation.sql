@@ -60,23 +60,35 @@ CREATE TABLE `User` (
     account_status VARCHAR(10) NOT NULL DEFAULT 'active'
 );
 
+-- Create tables without circular foreign keys first
+CREATE TABLE Department (
+    department_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    unit_head_id INT
+);
+
 CREATE TABLE Instructor (
     instructor_id INT PRIMARY KEY,
     instructor_type VARCHAR(10) NOT NULL CHECK (instructor_type IN ('professor', 'ta')),
     office_hours VARCHAR(255),
+    department_id INT,
     FOREIGN KEY (instructor_id) REFERENCES `User`(user_id)
         ON DELETE NO ACTION
         ON UPDATE NO ACTION
 );
 
-CREATE TABLE Department (
-    department_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    unit_head_id INT,
-    FOREIGN KEY (unit_head_id) REFERENCES Instructor(instructor_id)
-        ON DELETE SET NULL
-        ON UPDATE NO ACTION
-);
+-- Add foreign keys after both tables are created
+ALTER TABLE Department
+ADD CONSTRAINT fk_department_unit_head
+FOREIGN KEY (unit_head_id) REFERENCES Instructor(instructor_id)
+    ON DELETE SET NULL
+    ON UPDATE NO ACTION;
+
+ALTER TABLE Instructor
+ADD CONSTRAINT fk_instructor_department
+FOREIGN KEY (department_id) REFERENCES Department(department_id)
+    ON DELETE SET NULL
+    ON UPDATE NO ACTION;
 
 CREATE TABLE Student (
     student_id INT PRIMARY KEY,

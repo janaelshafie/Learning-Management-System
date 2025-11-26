@@ -7,10 +7,12 @@ class DepartmentManagementScreen extends StatefulWidget {
   const DepartmentManagementScreen({super.key});
 
   @override
-  State<DepartmentManagementScreen> createState() => _DepartmentManagementScreenState();
+  State<DepartmentManagementScreen> createState() =>
+      _DepartmentManagementScreenState();
 }
 
-class _DepartmentManagementScreenState extends State<DepartmentManagementScreen> with TickerProviderStateMixin {
+class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   List<dynamic> _departments = [];
   List<dynamic> _courses = [];
@@ -39,29 +41,33 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
 
   List<dynamic> _filterDepartments(List<dynamic> departments, String query) {
     if (query.isEmpty) return departments;
-    
+
     return departments.where((department) {
       final name = (department['name'] ?? '').toString().toLowerCase();
       final searchLower = query.toLowerCase();
-      
+
       return name.contains(searchLower);
     }).toList();
   }
 
   List<dynamic> _filterCourses(List<dynamic> courses, String query) {
     if (query.isEmpty) return courses;
-    
+
     return courses.where((course) {
       final courseCode = (course['courseCode'] ?? '').toString().toLowerCase();
       final title = (course['title'] ?? '').toString().toLowerCase();
-      final description = (course['description'] ?? '').toString().toLowerCase();
-      final department = _getDepartmentFromCourseCode(course['courseCode']).toLowerCase();
+      final description = (course['description'] ?? '')
+          .toString()
+          .toLowerCase();
+      final department = _getDepartmentFromCourseCode(
+        course['courseCode'],
+      ).toLowerCase();
       final searchLower = query.toLowerCase();
-      
+
       return courseCode.contains(searchLower) ||
-             title.contains(searchLower) ||
-             description.contains(searchLower) ||
-             department.contains(searchLower);
+          title.contains(searchLower) ||
+          description.contains(searchLower) ||
+          department.contains(searchLower);
     }).toList();
   }
 
@@ -93,9 +99,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
         _instructors = instructorsResult['instructors'] ?? [];
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
     }
 
     setState(() {
@@ -103,7 +109,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
     });
   }
 
-  Future<void> _showEditDepartmentDialog(Map<String, dynamic> department) async {
+  Future<void> _showEditDepartmentDialog(
+    Map<String, dynamic> department,
+  ) async {
     final nameController = TextEditingController(text: department['name']);
     int? selectedUnitHeadId = department['unitHeadId'];
 
@@ -124,7 +132,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedUnitHeadId,
+                initialValue: selectedUnitHeadId,
                 decoration: const InputDecoration(
                   labelText: 'Unit Head (Optional)',
                   border: OutlineInputBorder(),
@@ -134,10 +142,12 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     value: null,
                     child: Text('No Unit Head'),
                   ),
-                  ..._instructors.map((instructor) => DropdownMenuItem<int>(
-                    value: instructor['userId'],
-                    child: Text(instructor['name']),
-                  )),
+                  ..._instructors.map(
+                    (instructor) => DropdownMenuItem<int>(
+                      value: instructor['userId'],
+                      child: Text(instructor['name']),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   setDialogState(() {
@@ -156,7 +166,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
               onPressed: () async {
                 if (nameController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter department name')),
+                    const SnackBar(
+                      content: Text('Please enter department name'),
+                    ),
                   );
                   return;
                 }
@@ -170,14 +182,14 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 Navigator.of(context).pop();
 
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                   _loadData();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                 }
               },
               child: const Text('Update'),
@@ -209,7 +221,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedUnitHeadId,
+                initialValue: selectedUnitHeadId,
                 decoration: const InputDecoration(
                   labelText: 'Unit Head (Optional)',
                   border: OutlineInputBorder(),
@@ -219,10 +231,12 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     value: null,
                     child: Text('No Unit Head'),
                   ),
-                  ..._instructors.map((instructor) => DropdownMenuItem<int>(
-                    value: instructor['userId'],
-                    child: Text(instructor['name']),
-                  )),
+                  ..._instructors.map(
+                    (instructor) => DropdownMenuItem<int>(
+                      value: instructor['userId'],
+                      child: Text(instructor['name']),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   setDialogState(() {
@@ -241,7 +255,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
               onPressed: () async {
                 if (nameController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter department name')),
+                    const SnackBar(
+                      content: Text('Please enter department name'),
+                    ),
                   );
                   return;
                 }
@@ -254,14 +270,14 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 Navigator.of(context).pop();
 
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                   _loadData();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                 }
               },
               child: const Text('Create'),
@@ -273,10 +289,16 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
   }
 
   Future<void> _showEditCourseDialog(Map<String, dynamic> course) async {
-    final courseCodeController = TextEditingController(text: course['courseCode']);
+    final courseCodeController = TextEditingController(
+      text: course['courseCode'],
+    );
     final titleController = TextEditingController(text: course['title']);
-    final descriptionController = TextEditingController(text: course['description'] ?? '');
-    final creditsController = TextEditingController(text: course['credits'].toString());
+    final descriptionController = TextEditingController(
+      text: course['description'] ?? '',
+    );
+    final creditsController = TextEditingController(
+      text: course['credits'].toString(),
+    );
     String? selectedCourseType = course['courseType'];
 
     await showDialog(
@@ -323,7 +345,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCourseType,
+                  initialValue: selectedCourseType,
                   decoration: const InputDecoration(
                     labelText: 'Course Type (Optional)',
                     border: OutlineInputBorder(),
@@ -331,7 +353,10 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   items: const [
                     DropdownMenuItem(value: null, child: Text('None')),
                     DropdownMenuItem(value: 'core', child: Text('Core')),
-                    DropdownMenuItem(value: 'elective', child: Text('Elective')),
+                    DropdownMenuItem(
+                      value: 'elective',
+                      child: Text('Elective'),
+                    ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -353,7 +378,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     titleController.text.trim().isEmpty ||
                     creditsController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all required fields')),
+                    const SnackBar(
+                      content: Text('Please fill all required fields'),
+                    ),
                   );
                   return;
                 }
@@ -370,14 +397,14 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 Navigator.of(context).pop();
 
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                   _loadData();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                 }
               },
               child: const Text('Update'),
@@ -439,7 +466,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCourseType,
+                  initialValue: selectedCourseType,
                   decoration: const InputDecoration(
                     labelText: 'Course Type (Optional)',
                     border: OutlineInputBorder(),
@@ -447,7 +474,10 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   items: const [
                     DropdownMenuItem(value: null, child: Text('None')),
                     DropdownMenuItem(value: 'core', child: Text('Core')),
-                    DropdownMenuItem(value: 'elective', child: Text('Elective')),
+                    DropdownMenuItem(
+                      value: 'elective',
+                      child: Text('Elective'),
+                    ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -469,7 +499,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     titleController.text.trim().isEmpty ||
                     creditsController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all required fields')),
+                    const SnackBar(
+                      content: Text('Please fill all required fields'),
+                    ),
                   );
                   return;
                 }
@@ -485,14 +517,14 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 Navigator.of(context).pop();
 
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                   _loadData();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result['message'])),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(result['message'])));
                 }
               },
               child: const Text('Create'),
@@ -503,12 +535,17 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
     );
   }
 
-  Future<void> _deleteDepartment(int departmentId, String departmentName) async {
+  Future<void> _deleteDepartment(
+    int departmentId,
+    String departmentName,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Department'),
-        content: Text('Are you sure you want to delete department "$departmentName"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete department "$departmentName"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -525,16 +562,16 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
 
     if (confirmed == true) {
       final result = await _apiService.deleteDepartment(departmentId);
-      
+
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
         _loadData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
       }
     }
   }
@@ -544,7 +581,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Course'),
-        content: Text('Are you sure you want to delete course "$courseCode"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete course "$courseCode"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -561,16 +600,16 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
 
     if (confirmed == true) {
       final result = await _apiService.deleteCourse(courseId);
-      
+
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
         _loadData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
       }
     }
   }
@@ -658,7 +697,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
 
   Widget _buildDepartmentsTab() {
     final filteredDepartments = _filterDepartments(_departments, _searchQuery);
-    
+
     return Column(
       children: [
         // Search Bar for Departments
@@ -692,105 +731,128 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : filteredDepartments.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search, size: 64, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isNotEmpty ? 'No departments match your search' : 'No departments found',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(_searchQuery.isNotEmpty ? 'Try a different search term' : 'No departments in the system'),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'No departments match your search'
+                            : 'No departments found',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadData,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredDepartments.length,
-                        itemBuilder: (context, index) {
-                          final department = filteredDepartments[index];
-                          final unitHead = _instructors.firstWhere(
-                            (instructor) => instructor['userId'] == department['unitHeadId'],
-                            orElse: () => null,
-                          );
+                      const SizedBox(height: 8),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'Try a different search term'
+                            : 'No departments in the system',
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredDepartments.length,
+                    itemBuilder: (context, index) {
+                      final department = filteredDepartments[index];
+                      final unitHead = _instructors.firstWhere(
+                        (instructor) =>
+                            instructor['userId'] == department['unitHeadId'],
+                        orElse: () => null,
+                      );
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => DepartmentDetailsScreen(department: department),
-                                  ),
-                                ).then((_) {
-                                  _loadData(); // Reload data when returning from details
-                                });
-                              },
-                              child: ListTile(
-                                leading: const Icon(Icons.business, color: Colors.blue),
-                                title: Text(
-                                  department['name'],
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (unitHead != null)
-                                      Text('Unit Head: ${unitHead['name']}')
-                                    else
-                                      const Text('No Unit Head Assigned'),
-                                    Text('ID: ${department['departmentId']}'),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    PopupMenuButton(
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.edit, color: Colors.blue),
-                                              SizedBox(width: 8),
-                                              Text('Edit'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'delete',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.delete, color: Colors.red),
-                                              SizedBox(width: 8),
-                                              Text('Delete'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      onSelected: (value) {
-                                        if (value == 'edit') {
-                                          _showEditDepartmentDialog(department);
-                                        } else if (value == 'delete') {
-                                          _deleteDepartment(department['departmentId'], department['name']);
-                                        }
-                                      },
-                                    ),
-                                    const Icon(Icons.chevron_right, color: Colors.grey),
-                                  ],
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DepartmentDetailsScreen(
+                                  department: department,
                                 ),
                               ),
+                            ).then((_) {
+                              _loadData(); // Reload data when returning from details
+                            });
+                          },
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.business,
+                              color: Colors.blue,
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                            title: Text(
+                              department['name'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (unitHead != null)
+                                  Text('Unit Head: ${unitHead['name']}')
+                                else
+                                  const Text('No Unit Head Assigned'),
+                                Text('ID: ${department['departmentId']}'),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                PopupMenuButton(
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit, color: Colors.blue),
+                                          SizedBox(width: 8),
+                                          Text('Edit'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Delete'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _showEditDepartmentDialog(department);
+                                    } else if (value == 'delete') {
+                                      _deleteDepartment(
+                                        department['departmentId'],
+                                        department['name'],
+                                      );
+                                    }
+                                  },
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
     );
@@ -798,7 +860,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
 
   Widget _buildCoursesTab() {
     final filteredCourses = _filterCourses(_courses, _searchQuery);
-    
+
     return Column(
       children: [
         // Search Bar for Courses
@@ -832,128 +894,155 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : filteredCourses.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search, size: 64, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isNotEmpty ? 'No courses match your search' : 'No courses found',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(_searchQuery.isNotEmpty ? 'Try a different search term' : 'No courses in the system'),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'No courses match your search'
+                            : 'No courses found',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadData,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredCourses.length,
-                        itemBuilder: (context, index) {
-                          final course = filteredCourses[index];
-                          
-                          // Determine department from course code
-                          String department = _getDepartmentFromCourseCode(course['courseCode']);
-                          Color departmentColor = _getDepartmentColor(department);
+                      const SizedBox(height: 8),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'Try a different search term'
+                            : 'No courses in the system',
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredCourses.length,
+                    itemBuilder: (context, index) {
+                      final course = filteredCourses[index];
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CourseDetailsScreen(course: course),
-                                  ),
-                                );
-                                // Reload courses if course was deleted
-                                if (result == true) {
-                                  _loadData();
-                                }
-                              },
-                              child: ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: departmentColor.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.book,
-                                    color: departmentColor,
-                                  ),
-                                ),
-                                title: Text(
-                                  course['courseCode'],
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      course['title'],
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: departmentColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: departmentColor,
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            department,
-                                            style: TextStyle(
-                                              color: departmentColor,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                        if (course['courseType'] != null)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: course['courseType'] == 'core'
-                                                  ? Colors.green[50]
-                                                  : Colors.orange[50],
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              course['courseType'].toString().toUpperCase(),
-                                              style: TextStyle(
-                                                color: course['courseType'] == 'core'
-                                                    ? Colors.green[700]
-                                                    : Colors.orange[700],
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 11,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text('Credits: ${course['credits']}'),
-                                  ],
-                                ),
-                                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                      // Determine department from course code
+                      String department = _getDepartmentFromCourseCode(
+                        course['courseCode'],
+                      );
+                      Color departmentColor = _getDepartmentColor(department);
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    CourseDetailsScreen(course: course),
+                              ),
+                            );
+                            // Reload courses if course was deleted
+                            if (result == true) {
+                              _loadData();
+                            }
+                          },
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: departmentColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.book, color: departmentColor),
+                            ),
+                            title: Text(
+                              course['courseCode'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  course['title'],
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: departmentColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: departmentColor,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        department,
+                                        style: TextStyle(
+                                          color: departmentColor,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    if (course['courseType'] != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: course['courseType'] == 'core'
+                                              ? Colors.green[50]
+                                              : Colors.orange[50],
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          course['courseType']
+                                              .toString()
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            color:
+                                                course['courseType'] == 'core'
+                                                ? Colors.green[700]
+                                                : Colors.orange[700],
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Credits: ${course['credits']}'),
+                              ],
+                            ),
+                            trailing: const Icon(
+                              Icons.chevron_right,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
     );
@@ -967,10 +1056,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
         ],
       ),
       body: Column(
@@ -980,24 +1066,15 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
             child: TabBar(
               controller: _tabController,
               tabs: const [
-                Tab(
-                  icon: Icon(Icons.business),
-                  text: 'Departments',
-                ),
-                Tab(
-                  icon: Icon(Icons.book),
-                  text: 'Courses',
-                ),
+                Tab(icon: Icon(Icons.business), text: 'Departments'),
+                Tab(icon: Icon(Icons.book), text: 'Courses'),
               ],
             ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildDepartmentsTab(),
-                _buildCoursesTab(),
-              ],
+              children: [_buildDepartmentsTab(), _buildCoursesTab()],
             ),
           ),
         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
+import '../../common/app_state.dart';
 import 'department_management_screen.dart';
+import 'course_offerings_management_screen.dart';
 import '../auth/university_login_page.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -10,7 +12,8 @@ class AdminDashboardScreen extends StatefulWidget {
   _AdminDashboardScreenState createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> with TickerProviderStateMixin {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   List<dynamic> _pendingAccounts = [];
   List<dynamic> _allUsers = [];
@@ -52,7 +55,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       }
 
       // Load pending profile changes
-      final profileChangesResponse = await _apiService.getPendingProfileChanges();
+      final profileChangesResponse = await _apiService
+          .getPendingProfileChanges();
       if (profileChangesResponse['status'] == 'success') {
         _pendingProfileChanges = profileChangesResponse['pendingChanges'] ?? [];
       }
@@ -67,9 +71,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
     }
   }
 
@@ -85,15 +89,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       final name = user['name']?.toString().toLowerCase() ?? '';
       final email = user['email']?.toString().toLowerCase() ?? '';
       final role = user['role']?.toString().toLowerCase() ?? '';
-      final departmentName = user['departmentName']?.toString().toLowerCase() ?? '';
-      final instructorType = user['instructorType']?.toString().toLowerCase() ?? '';
+      final departmentName =
+          user['departmentName']?.toString().toLowerCase() ?? '';
+      final instructorType =
+          user['instructorType']?.toString().toLowerCase() ?? '';
       final studentNames = user['studentNames']?.toString().toLowerCase() ?? '';
-      return name.contains(_searchQuery) || 
-             email.contains(_searchQuery) || 
-             role.contains(_searchQuery) ||
-             departmentName.contains(_searchQuery) ||
-             instructorType.contains(_searchQuery) ||
-             studentNames.contains(_searchQuery);
+      return name.contains(_searchQuery) ||
+          email.contains(_searchQuery) ||
+          role.contains(_searchQuery) ||
+          departmentName.contains(_searchQuery) ||
+          instructorType.contains(_searchQuery) ||
+          studentNames.contains(_searchQuery);
     }).toList();
   }
 
@@ -104,10 +110,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       final fieldName = change['fieldName']?.toString().toLowerCase() ?? '';
       final oldValue = change['oldValue']?.toString().toLowerCase() ?? '';
       final newValue = change['newValue']?.toString().toLowerCase() ?? '';
-      return userName.contains(_searchQuery) || 
-             fieldName.contains(_searchQuery) ||
-             oldValue.contains(_searchQuery) ||
-             newValue.contains(_searchQuery);
+      return userName.contains(_searchQuery) ||
+          fieldName.contains(_searchQuery) ||
+          oldValue.contains(_searchQuery) ||
+          newValue.contains(_searchQuery);
     }).toList();
   }
 
@@ -116,10 +122,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     return announcements.where((announcement) {
       final title = announcement['title']?.toString().toLowerCase() ?? '';
       final content = announcement['content']?.toString().toLowerCase() ?? '';
-      final type = announcement['announcementType']?.toString().toLowerCase() ?? '';
-      return title.contains(_searchQuery) || 
-             content.contains(_searchQuery) || 
-             type.contains(_searchQuery);
+      final type =
+          announcement['announcementType']?.toString().toLowerCase() ?? '';
+      return title.contains(_searchQuery) ||
+          content.contains(_searchQuery) ||
+          type.contains(_searchQuery);
     }).toList();
   }
 
@@ -141,14 +148,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
       body: _isLoading
@@ -216,8 +217,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildTabCard(
-                          'Services',
-                          Icons.settings,
+                          'Courses',
+                          Icons.school,
                           6,
                           -1, // No count for this tab
                         ),
@@ -226,9 +227,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   ),
                 ),
                 // Content
-                Expanded(
-                  child: _buildContent(),
-                ),
+                Expanded(child: _buildContent()),
               ],
             ),
     );
@@ -236,12 +235,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   Widget _buildTabCard(String title, IconData icon, int index, int count) {
     final isSelected = _selectedTabIndex == index;
-    final isServices = index == 6; // Services card
-    
+
     return Card(
       elevation: isSelected ? 8 : 2,
       child: InkWell(
-        onTap: isServices ? null : () {
+        onTap: () {
           setState(() {
             _selectedTabIndex = index;
             _searchController.clear();
@@ -254,19 +252,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            color: isServices 
-                ? Colors.grey[200] 
-                : (isSelected ? const Color(0xFF1E3A8A) : Colors.white),
+            color: isSelected ? const Color(0xFF1E3A8A) : Colors.white,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+            children: [
               Icon(
                 icon,
                 size: 32,
-                color: isServices 
-                    ? Colors.grey[600] 
-                    : (isSelected ? Colors.white : const Color(0xFF1E3A8A)),
+                color: isSelected ? Colors.white : const Color(0xFF1E3A8A),
               ),
               const SizedBox(height: 8),
               Flexible(
@@ -275,9 +269,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: isServices 
-                        ? Colors.grey[600] 
-                        : (isSelected ? Colors.white : const Color(0xFF1E3A8A)),
+                    color: isSelected ? Colors.white : const Color(0xFF1E3A8A),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -294,8 +286,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                     color: isSelected ? Colors.white : Colors.green,
                   ),
                 ),
-                            ],
-                          ),
+            ],
+          ),
         ),
       ),
     );
@@ -305,7 +297,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     if (_selectedTabIndex == -1) {
       return _buildDashboardOverview();
     }
-    
+
     switch (_selectedTabIndex) {
       case 0:
         return _buildPendingAccountsTab();
@@ -320,7 +312,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       case 5:
         return const DepartmentManagementScreen();
       case 6:
-        return _buildServicesTab();
+        return const CourseOfferingsManagementScreen();
       default:
         return _buildDashboardOverview();
     }
@@ -343,10 +335,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           const SizedBox(height: 16),
           const Text(
             'Manage your Learning Management System efficiently',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 32),
           Expanded(
@@ -388,7 +377,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     );
   }
 
-  Widget _buildOverviewCard(String title, IconData icon, int count, Color color) {
+  Widget _buildOverviewCard(
+    String title,
+    IconData icon,
+    int count,
+    Color color,
+  ) {
     return Card(
       elevation: 4,
       child: Container(
@@ -404,11 +398,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 48,
-              color: color,
-            ),
+            Icon(icon, size: 48, color: color),
             const SizedBox(height: 12),
             Text(
               title,
@@ -436,7 +426,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   Widget _buildPendingAccountsTab() {
     final filteredAccounts = _filterUsers(_pendingAccounts);
-    
+
     return Column(
       children: [
         // Search Bar
@@ -469,7 +459,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                     leading: CircleAvatar(
                       backgroundColor: const Color(0xFF1E3A8A),
                       child: Text(
-                        account['name']?.toString().substring(0, 1).toUpperCase() ?? 'U',
+                        account['name']
+                                ?.toString()
+                                .substring(0, 1)
+                                .toUpperCase() ??
+                            'U',
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -478,7 +472,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(account['email'] ?? 'No email'),
-                        Text('Role: ${account['role']?.toString().toUpperCase() ?? 'UNKNOWN'}'),
+                        Text(
+                          'Role: ${account['role']?.toString().toUpperCase() ?? 'UNKNOWN'}',
+                        ),
                       ],
                     ),
                     trailing: Row(
@@ -491,10 +487,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         IconButton(
                           icon: const Icon(Icons.close, color: Colors.red),
                           onPressed: () => _rejectAccount(account['userId']),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
                 );
               },
             ),
@@ -506,11 +502,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   Widget _buildProfileChangesTab() {
     final filteredChanges = _filterProfileChanges(_pendingProfileChanges);
-    
+
     return Column(
       children: [
         // Search Bar
-            Padding(
+        Padding(
           padding: const EdgeInsets.all(16),
           child: TextField(
             controller: _searchController,
@@ -525,13 +521,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           ),
         ),
         // Content
-                  Expanded(
+        Expanded(
           child: RefreshIndicator(
             onRefresh: _loadData,
-                      child: ListView.builder(
+            child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: filteredChanges.length,
-                        itemBuilder: (context, index) {
+              itemBuilder: (context, index) {
                 final change = filteredChanges[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -570,14 +566,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
+                          children: [
                             TextButton(
-                              onPressed: () => _rejectProfileChange(change['changeId']),
-                              child: const Text('Reject', style: TextStyle(color: Colors.red)),
+                              onPressed: () =>
+                                  _rejectProfileChange(change['changeId']),
+                              child: const Text(
+                                'Reject',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             ElevatedButton(
-                              onPressed: () => _approveProfileChange(change['changeId']),
+                              onPressed: () =>
+                                  _approveProfileChange(change['changeId']),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
@@ -591,16 +592,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   ),
                 );
               },
-                                            ),
-                                          ),
-                                        ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildAllUsersTab() {
     final filteredUsers = _filterUsers(_allUsers);
-    
+
     return Column(
       children: [
         // Search Bar
@@ -614,10 +615,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+              ),
+            ),
+          ),
+        ),
         // Content
         Expanded(
           child: RefreshIndicator(
@@ -636,7 +637,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       leading: CircleAvatar(
                         backgroundColor: _getRoleColor(user['role']),
                         child: Text(
-                          user['name']?.toString().substring(0, 1).toUpperCase() ?? 'U',
+                          user['name']
+                                  ?.toString()
+                                  .substring(0, 1)
+                                  .toUpperCase() ??
+                              'U',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
@@ -645,24 +650,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(user['email'] ?? 'No email'),
-                          Text('Role: ${user['role']?.toString().toUpperCase() ?? 'UNKNOWN'}'),
-                          if (user['role'] == 'instructor' && user['instructorType'] != null)
+                          Text(
+                            'Role: ${user['role']?.toString().toUpperCase() ?? 'UNKNOWN'}',
+                          ),
+                          if (user['role'] == 'instructor' &&
+                              user['instructorType'] != null)
                             Text(
                               'Type: ${_getInstructorTypeDisplayName(user['instructorType'])}',
                               style: TextStyle(
-                                color: _getInstructorTypeColor(user['instructorType']),
+                                color: _getInstructorTypeColor(
+                                  user['instructorType'],
+                                ),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          if (user['role'] == 'student' && user['departmentName'] != null)
+                          if (user['role'] == 'student' &&
+                              user['departmentName'] != null)
                             Text(
                               'Department: ${user['departmentName']}',
                               style: TextStyle(
-                                color: _getDepartmentColor(user['departmentName']),
+                                color: _getDepartmentColor(
+                                  user['departmentName'],
+                                ),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          if (user['role'] == 'parent' && user['studentNames'] != null)
+                          if (user['role'] == 'parent' &&
+                              user['studentNames'] != null)
                             Text(
                               'Student(s): ${user['studentNames']}',
                               style: const TextStyle(
@@ -673,26 +687,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         ],
                       ),
                       trailing: Text(
-                        user['accountStatus']?.toString().toUpperCase() ?? 'UNKNOWN',
+                        user['accountStatus']?.toString().toUpperCase() ??
+                            'UNKNOWN',
                         style: TextStyle(
                           color: _getStatusColor(user['accountStatus']),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                     ),
                   ),
+                );
+              },
+            ),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildAnnouncementsTab() {
     final filteredAnnouncements = _filterAnnouncements(_announcements);
-    
+
     return Column(
       children: [
         // Header with Create Button
@@ -759,29 +774,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _getPriorityColor(announcement['priority']),
+                                    color: _getPriorityColor(
+                                      announcement['priority'],
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    announcement['priority']?.toString().toUpperCase() ?? 'MEDIUM',
+                                    announcement['priority']
+                                            ?.toString()
+                                            .toUpperCase() ??
+                                        'MEDIUM',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _getTypeColor(announcement['announcementType']),
+                                    color: _getTypeColor(
+                                      announcement['announcementType'],
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    announcement['announcementType']?.toString().replaceAll('_', ' ').toUpperCase() ?? 'ALL USERS',
+                                    announcement['announcementType']
+                                            ?.toString()
+                                            .replaceAll('_', ' ')
+                                            .toUpperCase() ??
+                                        'ALL USERS',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
@@ -815,24 +847,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 20),
-                                  onPressed: () => _showEditAnnouncementDialog(announcement),
+                                  onPressed: () =>
+                                      _showEditAnnouncementDialog(announcement),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                                  onPressed: () => _deleteAnnouncement(announcement['announcementId']),
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    size: 20,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _deleteAnnouncement(
+                                    announcement['announcementId'],
+                                  ),
                                 ),
                               ],
                             ),
                           ],
                         ),
                       ],
-                          ),
-                        ),
-                      );
-                    },
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
+          ),
+        ),
       ],
     );
   }
@@ -840,46 +879,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
   // Helper methods
   Color _getRoleColor(String? role) {
     switch (role?.toLowerCase()) {
-      case 'admin': return Colors.red;
-      case 'instructor': return Colors.blue;
-      case 'student': return Colors.green;
-      case 'parent': return Colors.orange;
-      default: return Colors.grey;
+      case 'admin':
+        return Colors.red;
+      case 'instructor':
+        return Colors.blue;
+      case 'student':
+        return Colors.green;
+      case 'parent':
+        return Colors.orange;
+      default:
+        return Colors.grey;
     }
   }
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
-      case 'active': return Colors.green;
-      case 'pending': return Colors.orange;
-      case 'rejected': return Colors.red;
-      default: return Colors.grey;
+      case 'active':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
   Color _getPriorityColor(String? priority) {
     switch (priority?.toLowerCase()) {
-      case 'urgent': return Colors.red;
-      case 'high': return Colors.orange;
-      case 'medium': return Colors.blue;
-      case 'low': return Colors.grey;
-      default: return Colors.blue;
+      case 'urgent':
+        return Colors.red;
+      case 'high':
+        return Colors.orange;
+      case 'medium':
+        return Colors.blue;
+      case 'low':
+        return Colors.grey;
+      default:
+        return Colors.blue;
     }
   }
 
   Color _getTypeColor(String? type) {
     switch (type?.toLowerCase()) {
-      case 'all_users': return Colors.purple;
-      case 'students_only': return Colors.green;
-      case 'instructors_only': return Colors.blue;
-      case 'admins_only': return Colors.red;
-      default: return Colors.purple;
+      case 'all_users':
+        return Colors.purple;
+      case 'students_only':
+        return Colors.green;
+      case 'instructors_only':
+        return Colors.blue;
+      case 'admins_only':
+        return Colors.red;
+      default:
+        return Colors.purple;
     }
   }
 
   Color _getInstructorTypeColor(String? instructorType) {
     if (instructorType == null) return Colors.grey;
-    
+
     switch (instructorType.toLowerCase()) {
       case 'professor':
         return Colors.purple;
@@ -893,7 +951,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   String _getInstructorTypeDisplayName(String? instructorType) {
     if (instructorType == null) return 'Unknown';
-    
+
     switch (instructorType.toLowerCase()) {
       case 'professor':
         return 'Professor';
@@ -907,7 +965,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   Color _getDepartmentColor(String? departmentName) {
     if (departmentName == null) return Colors.grey;
-    
+
     switch (departmentName.toLowerCase()) {
       case 'computer and systems engineering':
         return Colors.blue;
@@ -952,50 +1010,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   // Action methods
   Future<void> _approveAccount(dynamic userId) async {
-    final result = await _apiService.approveAccount(userId is String ? int.parse(userId) : userId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
+    final result = await _apiService.approveAccount(
+      userId is String ? int.parse(userId) : userId,
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
     if (result['status'] == 'success') {
       _loadData();
     }
   }
 
   Future<void> _rejectAccount(dynamic userId) async {
-    final result = await _apiService.rejectAccount(userId is String ? int.parse(userId) : userId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
+    final result = await _apiService.rejectAccount(
+      userId is String ? int.parse(userId) : userId,
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
     if (result['status'] == 'success') {
       _loadData();
     }
   }
 
   Future<void> _approveProfileChange(int changeId) async {
-    final result = await _apiService.approveProfileChange(changeId, 10); // Admin user ID
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
+    final result = await _apiService.approveProfileChange(
+      changeId,
+      currentUserId,
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
     if (result['status'] == 'success') {
       _loadData();
     }
   }
 
   Future<void> _rejectProfileChange(int changeId) async {
-    final result = await _apiService.rejectProfileChange(changeId, 10); // Admin user ID
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
+    final result = await _apiService.rejectProfileChange(
+      changeId,
+      currentUserId,
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
     if (result['status'] == 'success') {
       _loadData();
     }
   }
 
   Future<void> _showUserManagementDialog(Map<String, dynamic> user) async {
-    final TextEditingController nameController = TextEditingController(text: user['name']?.toString() ?? '');
-    final TextEditingController emailController = TextEditingController(text: user['email']?.toString() ?? '');
-    final TextEditingController phoneController = TextEditingController(text: user['phone']?.toString() ?? '');
-    final TextEditingController locationController = TextEditingController(text: user['location']?.toString() ?? '');
+    final TextEditingController nameController = TextEditingController(
+      text: user['name']?.toString() ?? '',
+    );
+    final TextEditingController emailController = TextEditingController(
+      text: user['email']?.toString() ?? '',
+    );
+    final TextEditingController phoneController = TextEditingController(
+      text: user['phone']?.toString() ?? '',
+    );
+    final TextEditingController locationController = TextEditingController(
+      text: user['location']?.toString() ?? '',
+    );
     final TextEditingController passwordController = TextEditingController();
 
     await showDialog(
@@ -1039,14 +1115,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('User ID: ${user['userId']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                Text('Role: ${user['role']?.toString().toUpperCase() ?? 'UNKNOWN'}'),
-                                Text('Status: ${user['accountStatus']?.toString().toUpperCase() ?? 'UNKNOWN'}'),
+                                Text(
+                                  'User ID: ${user['userId']}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Role: ${user['role']?.toString().toUpperCase() ?? 'UNKNOWN'}',
+                                ),
+                                Text(
+                                  'Status: ${user['accountStatus']?.toString().toUpperCase() ?? 'UNKNOWN'}',
+                                ),
                                 if (user['instructorType'] != null)
                                   Text(
                                     'Type: ${_getInstructorTypeDisplayName(user['instructorType'])}',
                                     style: TextStyle(
-                                      color: _getInstructorTypeColor(user['instructorType']),
+                                      color: _getInstructorTypeColor(
+                                        user['instructorType'],
+                                      ),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -1062,13 +1149,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Full Name', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Full Name',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: nameController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1079,13 +1175,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Email',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: emailController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1100,13 +1205,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Phone',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: phoneController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1117,13 +1231,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Location',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: locationController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1136,15 +1259,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('New Password (optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const Text(
+                              'New Password (optional)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: passwordController,
                               obscureText: true,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                hintText: 'Leave empty to keep current password',
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                hintText:
+                                    'Leave empty to keep current password',
                               ),
                             ),
                           ],
@@ -1154,14 +1287,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Official Mail (Read-only)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const Text(
+                              'Official Mail (Read-only)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               enabled: false,
                               decoration: InputDecoration(
                                 border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                hintText: user['officialMail']?.toString() ?? 'No official mail',
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                hintText:
+                                    user['officialMail']?.toString() ??
+                                    'No official mail',
                               ),
                             ),
                           ],
@@ -1181,22 +1325,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           context: context,
                           builder: (context) => AlertDialog(
                             title: const Text('Delete User'),
-                            content: Text('Are you sure you want to delete ${user['name']}? This action cannot be undone.'),
+                            content: Text(
+                              'Are you sure you want to delete ${user['name']}? This action cannot be undone.',
+                            ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
                                 child: const Text('Cancel'),
                               ),
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ),
                             ],
                           ),
                         );
-                        
+
                         if (confirmed == true) {
-                          final result = await _apiService.deleteUser(user['userId']);
+                          final result = await _apiService.deleteUser(
+                            user['userId'],
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(result['message'])),
                           );
@@ -1207,7 +1360,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         }
                       },
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      label: const Text('Delete User', style: TextStyle(color: Colors.red)),
+                      label: const Text(
+                        'Delete User',
+                        style: TextStyle(color: Colors.red),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red[50],
                         side: BorderSide(color: Colors.red[300]!),
@@ -1217,7 +1373,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton(
@@ -1232,10 +1391,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                             };
 
                             if (passwordController.text.trim().isNotEmpty) {
-                              updateData['password'] = passwordController.text.trim();
+                              updateData['password'] = passwordController.text
+                                  .trim();
                             }
 
-                            final result = await _apiService.updateUser(updateData);
+                            final result = await _apiService.updateUser(
+                              updateData,
+                            );
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(result['message'])),
@@ -1249,9 +1411,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E3A8A),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                           ),
-                          child: const Text('Update User', style: TextStyle(fontSize: 16)),
+                          child: const Text(
+                            'Update User',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                       ],
                     ),
@@ -1309,13 +1477,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Title', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const Text(
+                              'Title',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: titleController,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                                 hintText: 'Enter announcement title',
                               ),
                             ),
@@ -1326,14 +1503,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Content', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const Text(
+                              'Content',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: contentController,
                               maxLines: 8,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                                 hintText: 'Enter announcement content',
                                 alignLabelWithHint: true,
                               ),
@@ -1348,19 +1534,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Target Audience', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Target Audience',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String>(
-                                    value: selectedType,
+                                    initialValue: selectedType,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                     items: const [
-                                      DropdownMenuItem(value: 'all_users', child: Text('All Users')),
-                                      DropdownMenuItem(value: 'students_only', child: Text('Students Only')),
-                                      DropdownMenuItem(value: 'instructors_only', child: Text('Instructors Only')),
-                                      DropdownMenuItem(value: 'admins_only', child: Text('Admins Only')),
+                                      DropdownMenuItem(
+                                        value: 'all_users',
+                                        child: Text('All Users'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'students_only',
+                                        child: Text('Students Only'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'instructors_only',
+                                        child: Text('Instructors Only'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'admins_only',
+                                        child: Text('Admins Only'),
+                                      ),
                                     ],
                                     onChanged: (value) {
                                       setDialogState(() {
@@ -1376,19 +1583,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Priority', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Priority',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String>(
-                                    value: selectedPriority,
+                                    initialValue: selectedPriority,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                     items: const [
-                                      DropdownMenuItem(value: 'low', child: Text('Low')),
-                                      DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                                      DropdownMenuItem(value: 'high', child: Text('High')),
-                                      DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                                      DropdownMenuItem(
+                                        value: 'low',
+                                        child: Text('Low'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'medium',
+                                        child: Text('Medium'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'high',
+                                        child: Text('High'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'urgent',
+                                        child: Text('Urgent'),
+                                      ),
                                     ],
                                     onChanged: (value) {
                                       setDialogState(() {
@@ -1435,7 +1663,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton(
@@ -1449,7 +1680,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
                         if (contentController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Content is required')),
+                            const SnackBar(
+                              content: Text('Content is required'),
+                            ),
                           );
                           return;
                         }
@@ -1462,7 +1695,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           'createdBy': '10', // Admin user ID
                         };
 
-                        final result = await _apiService.createAnnouncement(announcementData);
+                        final result = await _apiService.createAnnouncement(
+                          announcementData,
+                        );
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(result['message'])),
@@ -1476,9 +1711,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
-                      child: const Text('Create Announcement', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Create Announcement',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -1490,10 +1731,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     );
   }
 
-  Future<void> _showEditAnnouncementDialog(Map<String, dynamic> announcement) async {
-    final TextEditingController titleController = TextEditingController(text: announcement['title']?.toString() ?? '');
-    final TextEditingController contentController = TextEditingController(text: announcement['content']?.toString() ?? '');
-    String selectedType = announcement['announcementType']?.toString() ?? 'all_users';
+  Future<void> _showEditAnnouncementDialog(
+    Map<String, dynamic> announcement,
+  ) async {
+    final TextEditingController titleController = TextEditingController(
+      text: announcement['title']?.toString() ?? '',
+    );
+    final TextEditingController contentController = TextEditingController(
+      text: announcement['content']?.toString() ?? '',
+    );
+    String selectedType =
+        announcement['announcementType']?.toString() ?? 'all_users';
     String selectedPriority = announcement['priority']?.toString() ?? 'medium';
 
     await showDialog(
@@ -1532,19 +1780,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Title Field
-                        const Text('Title', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        const Text(
+                          'Title',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: titleController,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
                             hintText: 'Enter announcement title',
                           ),
                         ),
                         const SizedBox(height: 20),
                         // Content Field
-                        const Text('Content', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        const Text(
+                          'Content',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           height: 200,
@@ -1572,19 +1835,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Target Audience', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Target Audience',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String>(
-                                    value: selectedType,
+                                    initialValue: selectedType,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                     items: const [
-                                      DropdownMenuItem(value: 'all_users', child: Text('All Users')),
-                                      DropdownMenuItem(value: 'students_only', child: Text('Students Only')),
-                                      DropdownMenuItem(value: 'instructors_only', child: Text('Instructors Only')),
-                                      DropdownMenuItem(value: 'admins_only', child: Text('Admins Only')),
+                                      DropdownMenuItem(
+                                        value: 'all_users',
+                                        child: Text('All Users'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'students_only',
+                                        child: Text('Students Only'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'instructors_only',
+                                        child: Text('Instructors Only'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'admins_only',
+                                        child: Text('Admins Only'),
+                                      ),
                                     ],
                                     onChanged: (value) {
                                       setDialogState(() {
@@ -1600,19 +1884,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Priority', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Priority',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String>(
-                                    value: selectedPriority,
+                                    initialValue: selectedPriority,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                     items: const [
-                                      DropdownMenuItem(value: 'low', child: Text('Low')),
-                                      DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                                      DropdownMenuItem(value: 'high', child: Text('High')),
-                                      DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                                      DropdownMenuItem(
+                                        value: 'low',
+                                        child: Text('Low'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'medium',
+                                        child: Text('Medium'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'high',
+                                        child: Text('High'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'urgent',
+                                        child: Text('Urgent'),
+                                      ),
                                     ],
                                     onChanged: (value) {
                                       setDialogState(() {
@@ -1636,12 +1941,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info, color: Colors.blue[600], size: 20),
+                              Icon(
+                                Icons.info,
+                                color: Colors.blue[600],
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Changes will be visible to the selected audience immediately after saving.',
-                                  style: TextStyle(color: Colors.blue[800], fontSize: 14),
+                                  style: TextStyle(
+                                    color: Colors.blue[800],
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1658,27 +1970,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () async {
-                        if (titleController.text.trim().isEmpty || contentController.text.trim().isEmpty) {
+                        if (titleController.text.trim().isEmpty ||
+                            contentController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please fill in all fields')),
+                            const SnackBar(
+                              content: Text('Please fill in all fields'),
+                            ),
                           );
                           return;
                         }
 
                         final updateData = {
-                          'announcementId': announcement['announcementId'].toString(),
+                          'announcementId': announcement['announcementId']
+                              .toString(),
                           'title': titleController.text.trim(),
                           'content': contentController.text.trim(),
                           'announcementType': selectedType,
                           'priority': selectedPriority,
                         };
 
-                        final result = await _apiService.updateAnnouncement(updateData);
+                        final result = await _apiService.updateAnnouncement(
+                          updateData,
+                        );
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(result['message'])),
@@ -1692,9 +2013,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
-                      child: const Text('Update Announcement', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Update Announcement',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -1707,10 +2034,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
   }
 
   Future<void> _deleteAnnouncement(int announcementId) async {
-    final result = await _apiService.deleteAnnouncement(announcementId.toString());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
+    final result = await _apiService.deleteAnnouncement(
+      announcementId.toString(),
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
     if (result['status'] == 'success') {
       _loadData();
     }
@@ -1746,7 +2075,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             ],
           ),
           const SizedBox(height: 24),
-          
+
           // Create User Form Card
           Card(
             elevation: 4,
@@ -1764,7 +2093,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Form Fields
                   _buildCreateUserForm(),
                 ],
@@ -1779,18 +2108,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
   Widget _buildCreateUserForm() {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController emailController = TextEditingController();
-    final TextEditingController officialMailController = TextEditingController();
+    final TextEditingController officialMailController =
+        TextEditingController();
     final TextEditingController phoneController = TextEditingController();
     final TextEditingController locationController = TextEditingController();
     final TextEditingController nationalIdController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
-    final TextEditingController studentNationalIdController = TextEditingController();
-    
+    final TextEditingController studentNationalIdController =
+        TextEditingController();
+
     String selectedRole = 'student';
     String selectedInstructorType = 'professor';
     String selectedDepartment = '1'; // Default to first department
     List<Map<String, dynamic>> departments = [];
-    
+
     return StatefulBuilder(
       builder: (context, setState) {
         return Column(
@@ -1802,13 +2133,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Full Name *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Full Name *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: nameController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter full name',
                         ),
                       ),
@@ -1820,13 +2160,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('National ID *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'National ID *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: nationalIdController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter national ID',
                         ),
                       ),
@@ -1836,7 +2185,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Email Row
             Row(
               children: [
@@ -1844,13 +2193,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Email *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Email *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: emailController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter email address',
                         ),
                       ),
@@ -1862,13 +2220,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Official Mail *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Official Mail *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: officialMailController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter official mail',
                         ),
                       ),
@@ -1878,7 +2245,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Contact Information Row
             Row(
               children: [
@@ -1886,13 +2253,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Phone',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: phoneController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter phone number',
                         ),
                       ),
@@ -1904,13 +2280,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Location',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: locationController,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter location',
                         ),
                       ),
@@ -1920,7 +2305,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Role and Password Row
             Row(
               children: [
@@ -1928,19 +2313,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Role *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Role *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: selectedRole,
+                        initialValue: selectedRole,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'student', child: Text('Student')),
-                          DropdownMenuItem(value: 'instructor', child: Text('Instructor')),
-                          DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                          DropdownMenuItem(value: 'parent', child: Text('Parent')),
+                          DropdownMenuItem(
+                            value: 'student',
+                            child: Text('Student'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'instructor',
+                            child: Text('Instructor'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'admin',
+                            child: Text('Admin'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'parent',
+                            child: Text('Parent'),
+                          ),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -1956,14 +2362,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Password *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Password *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: passwordController,
                         obscureText: true,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           hintText: 'Enter password',
                         ),
                       ),
@@ -1973,23 +2388,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Conditional Fields based on Role
             if (selectedRole == 'instructor') ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Instructor Type *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Instructor Type *',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedInstructorType,
+                    initialValue: selectedInstructorType,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'professor', child: Text('Professor')),
-                      DropdownMenuItem(value: 'ta', child: Text('Teaching Assistant')),
+                      DropdownMenuItem(
+                        value: 'professor',
+                        child: Text('Professor'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ta',
+                        child: Text('Teaching Assistant'),
+                      ),
                     ],
                     onChanged: (value) {
                       setState(() {
@@ -2001,18 +2428,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ),
               const SizedBox(height: 20),
             ],
-            
+
             if (selectedRole == 'parent') ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Student National ID *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Student National ID *',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: studentNationalIdController,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       hintText: 'Enter student national ID',
                     ),
                   ),
@@ -2025,23 +2458,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ),
               const SizedBox(height: 20),
             ],
-            
+
             if (selectedRole == 'student') ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Department *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Department *',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 8),
                   FutureBuilder<Map<String, dynamic>>(
                     future: _apiService.getAllDepartments(),
                     builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data!['status'] == 'success') {
-                        departments = List<Map<String, dynamic>>.from(snapshot.data!['departments'] ?? []);
+                      if (snapshot.hasData &&
+                          snapshot.data!['status'] == 'success') {
+                        departments = List<Map<String, dynamic>>.from(
+                          snapshot.data!['departments'] ?? [],
+                        );
                         return DropdownButtonFormField<String>(
-                          value: selectedDepartment,
+                          initialValue: selectedDepartment,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
                           ),
                           items: departments.map((dept) {
                             return DropdownMenuItem(
@@ -2070,7 +2512,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               ),
               const SizedBox(height: 20),
             ],
-            
+
             // Create Button
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -2084,19 +2526,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         nationalIdController.text.trim().isEmpty ||
                         passwordController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill in all required fields')),
+                        const SnackBar(
+                          content: Text('Please fill in all required fields'),
+                        ),
                       );
                       return;
                     }
-                    
+
                     // Additional validation for parents
-                    if (selectedRole == 'parent' && studentNationalIdController.text.trim().isEmpty) {
+                    if (selectedRole == 'parent' &&
+                        studentNationalIdController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Student National ID is required for parent accounts')),
+                        const SnackBar(
+                          content: Text(
+                            'Student National ID is required for parent accounts',
+                          ),
+                        ),
                       );
                       return;
                     }
-                    
+
                     // Prepare user data
                     final userData = {
                       'name': nameController.text.trim(),
@@ -2108,19 +2557,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       'password': passwordController.text.trim(),
                       'role': selectedRole,
                     };
-                    
+
                     // Add role-specific data
                     if (selectedRole == 'instructor') {
                       userData['instructorType'] = selectedInstructorType;
                     } else if (selectedRole == 'student') {
                       userData['departmentId'] = selectedDepartment;
                     } else if (selectedRole == 'parent') {
-                      userData['studentNationalId'] = studentNationalIdController.text.trim();
+                      userData['studentNationalId'] =
+                          studentNationalIdController.text.trim();
                     }
-                    
+
                     try {
                       final result = await _apiService.createUser(userData);
-                      
+
                       if (result['status'] == 'confirmation_required') {
                         // Show confirmation dialog for parent replacement
                         _showParentReplacementDialog(
@@ -2135,7 +2585,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(result['message'])),
                         );
-                        
+
                         if (result['status'] == 'success') {
                           // Clear form
                           nameController.clear();
@@ -2146,7 +2596,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           nationalIdController.clear();
                           passwordController.clear();
                           studentNationalIdController.clear();
-                          
+
                           // Refresh user list
                           _loadData();
                         }
@@ -2162,7 +2612,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E3A8A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ],
@@ -2197,7 +2650,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text('• Replace existing parent ($existingParentName) with new parent'),
+              Text(
+                '• Replace existing parent ($existingParentName) with new parent',
+              ),
               const SizedBox(height: 4),
               Text('• Keep existing parent and cancel new parent creation'),
             ],
@@ -2206,10 +2661,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                
+
                 // Cancel parent creation
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Parent creation cancelled - keeping existing parent')),
+                  const SnackBar(
+                    content: Text(
+                      'Parent creation cancelled - keeping existing parent',
+                    ),
+                  ),
                 );
               },
               child: const Text('Keep Existing Parent'),
@@ -2217,28 +2676,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                
+
                 try {
                   // Replace the existing parent
                   final replaceData = {
                     'studentId': studentId,
                     'existingParentId': existingParentId,
-                    'newParentId': userData['userId'], // This will be set after user creation
+                    'newParentId':
+                        userData['userId'], // This will be set after user creation
                     'replaceParent': true,
                   };
-                  
+
                   // First create the user, then replace the parent
                   final createResult = await _apiService.createUser(userData);
-                  
+
                   if (createResult['status'] == 'success') {
                     replaceData['newParentId'] = createResult['userId'];
-                    
-                    final replaceResult = await _apiService.replaceParent(replaceData);
-                    
+
+                    final replaceResult = await _apiService.replaceParent(
+                      replaceData,
+                    );
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(replaceResult['message'])),
                     );
-                    
+
                     if (replaceResult['status'] == 'success') {
                       // Refresh user list
                       _loadData();
@@ -2259,38 +2721,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           ],
         );
       },
-    );
-  }
-
-  Widget _buildServicesTab() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.settings,
-            size: 64,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Services',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Services functionality coming soon...',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

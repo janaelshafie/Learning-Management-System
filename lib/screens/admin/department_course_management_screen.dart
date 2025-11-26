@@ -5,10 +5,13 @@ class DepartmentCourseManagementScreen extends StatefulWidget {
   const DepartmentCourseManagementScreen({super.key});
 
   @override
-  State<DepartmentCourseManagementScreen> createState() => _DepartmentCourseManagementScreenState();
+  State<DepartmentCourseManagementScreen> createState() =>
+      _DepartmentCourseManagementScreenState();
 }
 
-class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManagementScreen> with TickerProviderStateMixin {
+class _DepartmentCourseManagementScreenState
+    extends State<DepartmentCourseManagementScreen>
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   List<dynamic> _departments = [];
   List<dynamic> _courses = [];
@@ -33,7 +36,8 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
       final deptResult = await _apiService.getAllDepartments();
       final courseResult = await _apiService.getAllCourses();
 
-      if (deptResult['status'] == 'success' && courseResult['status'] == 'success') {
+      if (deptResult['status'] == 'success' &&
+          courseResult['status'] == 'success') {
         setState(() {
           _departments = deptResult['departments'] ?? [];
           _courses = courseResult['courses'] ?? [];
@@ -53,9 +57,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
     }
   }
 
@@ -104,14 +108,18 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
     }
 
     // Get courses not already linked to this department
-    final linkedCourseIds = _departmentCourses.map((dc) => dc['courseId']).toList();
+    final linkedCourseIds = _departmentCourses
+        .map((dc) => dc['courseId'])
+        .toList();
     final availableCourses = _courses.where((course) {
       return !linkedCourseIds.contains(course['courseId']);
     }).toList();
 
     if (availableCourses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All courses are already linked to this department')),
+        const SnackBar(
+          content: Text('All courses are already linked to this department'),
+        ),
       );
       return;
     }
@@ -138,7 +146,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                   items: availableCourses.map((course) {
                     return DropdownMenuItem<int>(
                       value: course['courseId'],
-                      child: Text('${course['courseCode']} - ${course['title']}'),
+                      child: Text(
+                        '${course['courseCode']} - ${course['title']}',
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -149,14 +159,17 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCourseType,
+                  initialValue: selectedCourseType,
                   decoration: const InputDecoration(
                     labelText: 'Course Type *',
                     border: OutlineInputBorder(),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'core', child: Text('Core')),
-                    DropdownMenuItem(value: 'elective', child: Text('Elective')),
+                    DropdownMenuItem(
+                      value: 'elective',
+                      child: Text('Elective'),
+                    ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -214,7 +227,12 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
     );
   }
 
-  Future<void> _linkCourse(int courseId, String courseType, int? capacity, String? eligibility) async {
+  Future<void> _linkCourse(
+    int courseId,
+    String courseType,
+    int? capacity,
+    String? eligibility,
+  ) async {
     try {
       final result = await _apiService.linkCourseToDepartment(
         departmentId: _selectedDepartmentId!,
@@ -225,9 +243,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
       );
 
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result['message'])));
         _loadDepartmentCourses();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -235,9 +253,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -246,7 +264,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unlink Course'),
-        content: Text('Are you sure you want to unlink $courseCode from this department?'),
+        content: Text(
+          'Are you sure you want to unlink $courseCode from this department?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -269,19 +289,21 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
         );
 
         if (result['status'] == 'success') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'])),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
           _loadDepartmentCourses();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Error unlinking course')),
+            SnackBar(
+              content: Text(result['message'] ?? 'Error unlinking course'),
+            ),
           );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -331,7 +353,8 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                           itemCount: _departments.length,
                           itemBuilder: (context, index) {
                             final dept = _departments[index];
-                            final isSelected = _selectedDepartmentId == dept['departmentId'];
+                            final isSelected =
+                                _selectedDepartmentId == dept['departmentId'];
 
                             return ListTile(
                               selected: isSelected,
@@ -340,7 +363,9 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                               title: Text(
                                 dept['name'],
                                 style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                               onTap: () {
@@ -360,9 +385,7 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                 // Main Content
                 Expanded(
                   child: _selectedDepartmentId == null
-                      ? const Center(
-                          child: Text('Please select a department'),
-                        )
+                      ? const Center(child: Text('Please select a department'))
                       : Column(
                           children: [
                             // Filter Buttons
@@ -423,138 +446,173 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
                             // Courses List
                             Expanded(
                               child: _isLoadingCourses
-                                  ? const Center(child: CircularProgressIndicator())
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
                                   : _departmentCourses.isEmpty
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.book_outlined,
-                                                size: 64,
-                                                color: Colors.grey,
-                                              ),
-                                              const SizedBox(height: 16),
-                                              Text(
-                                                _selectedFilter == 'all'
-                                                    ? 'No courses linked to this department'
-                                                    : 'No $_selectedFilter courses for this department',
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.grey,
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.book_outlined,
+                                            size: 64,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            _selectedFilter == 'all'
+                                                ? 'No courses linked to this department'
+                                                : 'No $_selectedFilter courses for this department',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Click the + button to link a course',
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : RefreshIndicator(
+                                      onRefresh: _loadDepartmentCourses,
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.all(16),
+                                        itemCount: _departmentCourses.length,
+                                        itemBuilder: (context, index) {
+                                          final dc = _departmentCourses[index];
+                                          final course = _courses.firstWhere(
+                                            (c) =>
+                                                c['courseId'] == dc['courseId'],
+                                            orElse: () => null,
+                                          );
+
+                                          if (course == null)
+                                            return const SizedBox();
+
+                                          final courseType = dc['courseType'];
+                                          final isCore = courseType == 'core';
+
+                                          return Card(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 12,
+                                            ),
+                                            child: ListTile(
+                                              leading: Container(
+                                                padding: const EdgeInsets.all(
+                                                  8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: isCore
+                                                      ? Colors.green[50]
+                                                      : Colors.orange[50],
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Icon(
+                                                  Icons.book,
+                                                  color: isCore
+                                                      ? Colors.green[700]
+                                                      : Colors.orange[700],
                                                 ),
                                               ),
-                                              const SizedBox(height: 8),
-                                              const Text('Click the + button to link a course'),
-                                            ],
-                                          ),
-                                        )
-                                      : RefreshIndicator(
-                                          onRefresh: _loadDepartmentCourses,
-                                          child: ListView.builder(
-                                            padding: const EdgeInsets.all(16),
-                                            itemCount: _departmentCourses.length,
-                                            itemBuilder: (context, index) {
-                                              final dc = _departmentCourses[index];
-                                              final course = _courses.firstWhere(
-                                                (c) => c['courseId'] == dc['courseId'],
-                                                orElse: () => null,
-                                              );
-
-                                              if (course == null) return const SizedBox();
-
-                                              final courseType = dc['courseType'];
-                                              final isCore = courseType == 'core';
-
-                                              return Card(
-                                                margin: const EdgeInsets.only(bottom: 12),
-                                                child: ListTile(
-                                                  leading: Container(
-                                                    padding: const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color: isCore
-                                                          ? Colors.green[50]
-                                                          : Colors.orange[50],
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.book,
-                                                      color: isCore
-                                                          ? Colors.green[700]
-                                                          : Colors.orange[700],
-                                                    ),
-                                                  ),
-                                                  title: Text(
-                                                    course['courseCode'],
-                                                    style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  subtitle: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                              title: Text(
+                                                course['courseCode'],
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              subtitle: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(course['title']),
+                                                  const SizedBox(height: 4),
+                                                  Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 4,
                                                     children: [
-                                                      Text(course['title']),
-                                                      const SizedBox(height: 4),
-                                                      Wrap(
-                                                        spacing: 8,
-                                                        runSpacing: 4,
-                                                        children: [
-                                                          Chip(
-                                                            label: Text(
-                                                              courseType.toUpperCase(),
-                                                              style: const TextStyle(
+                                                      Chip(
+                                                        label: Text(
+                                                          courseType
+                                                              .toUpperCase(),
+                                                          style:
+                                                              const TextStyle(
                                                                 fontSize: 11,
-                                                                fontWeight: FontWeight.bold,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
                                                               ),
-                                                            ),
-                                                            backgroundColor: isCore
-                                                                ? Colors.green[50]
-                                                                : Colors.orange[50],
-                                                            labelStyle: TextStyle(
-                                                              color: isCore
-                                                                  ? Colors.green[700]
-                                                                  : Colors.orange[700],
-                                                            ),
-                                                          ),
-                                                          if (dc['capacity'] != null)
-                                                            Chip(
-                                                              label: Text(
-                                                                'Capacity: ${dc['capacity']}',
-                                                                style: const TextStyle(fontSize: 11),
-                                                              ),
-                                                              backgroundColor: Colors.blue[50],
-                                                            ),
-                                                        ],
+                                                        ),
+                                                        backgroundColor: isCore
+                                                            ? Colors.green[50]
+                                                            : Colors.orange[50],
+                                                        labelStyle: TextStyle(
+                                                          color: isCore
+                                                              ? Colors
+                                                                    .green[700]
+                                                              : Colors
+                                                                    .orange[700],
+                                                        ),
                                                       ),
-                                                      if (dc['eligibilityRequirements'] != null &&
-                                                          dc['eligibilityRequirements'].toString().isNotEmpty)
-                                                        Padding(
-                                                          padding: const EdgeInsets.only(top: 4),
-                                                          child: Text(
-                                                            'Eligibility: ${dc['eligibilityRequirements']}',
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors.grey[700],
-                                                              fontStyle: FontStyle.italic,
-                                                            ),
+                                                      if (dc['capacity'] !=
+                                                          null)
+                                                        Chip(
+                                                          label: Text(
+                                                            'Capacity: ${dc['capacity']}',
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 11,
+                                                                ),
                                                           ),
+                                                          backgroundColor:
+                                                              Colors.blue[50],
                                                         ),
                                                     ],
                                                   ),
-                                                  trailing: IconButton(
-                                                    icon: const Icon(Icons.link_off, color: Colors.red),
-                                                    onPressed: () => _unlinkCourse(
-                                                      course['courseId'],
-                                                      course['courseCode'],
+                                                  if (dc['eligibilityRequirements'] !=
+                                                          null &&
+                                                      dc['eligibilityRequirements']
+                                                          .toString()
+                                                          .isNotEmpty)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            top: 4,
+                                                          ),
+                                                      child: Text(
+                                                        'Eligibility: ${dc['eligibilityRequirements']}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              Colors.grey[700],
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                        ),
+                                                      ),
                                                     ),
-                                                    tooltip: 'Unlink Course',
-                                                  ),
+                                                ],
+                                              ),
+                                              trailing: IconButton(
+                                                icon: const Icon(
+                                                  Icons.link_off,
+                                                  color: Colors.red,
                                                 ),
-                                              );
-                                            },
-                                          ),
-                                        ),
+                                                onPressed: () => _unlinkCourse(
+                                                  course['courseId'],
+                                                  course['courseCode'],
+                                                ),
+                                                tooltip: 'Unlink Course',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -564,11 +622,10 @@ class _DepartmentCourseManagementScreenState extends State<DepartmentCourseManag
       floatingActionButton: _selectedDepartmentId != null
           ? FloatingActionButton(
               onPressed: _showLinkCourseDialog,
-              child: const Icon(Icons.add),
               tooltip: 'Link Course to Department',
+              child: const Icon(Icons.add),
             )
           : null,
     );
   }
 }
-

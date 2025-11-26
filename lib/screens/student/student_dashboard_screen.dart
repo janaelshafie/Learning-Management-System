@@ -6,14 +6,15 @@ import 'study_materials_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String? userEmail;
-  
+
   const StudentDashboardScreen({super.key, this.userEmail});
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
 }
 
-class _StudentDashboardScreenState extends State<StudentDashboardScreen> with TickerProviderStateMixin {
+class _StudentDashboardScreenState extends State<StudentDashboardScreen>
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late TabController _tabController;
   Map<String, dynamic>? _userData;
@@ -25,12 +26,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   // Real data from database
   double _cumulativeGPA = 0.0;
   int _completedCredits = 0;
-  int _totalCredits = 170; // Total credits needed for graduation
+  final int _totalCredits = 170; // Total credits needed for graduation
   String _departmentName = '';
 
   // Sample courses data
   List<Map<String, dynamic>> _courses = [];
-  
+
   // Announcements data
   List<dynamic> _announcements = [];
 
@@ -58,13 +59,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
 
     try {
       print('Loading user data for email: ${widget.userEmail}');
-      
+
       // Get user data from backend using the logged-in user's email
       if (widget.userEmail != null) {
         print('Calling getUserByEmail with: ${widget.userEmail}');
-        final userResponse = await _apiService.getUserByEmail(widget.userEmail!);
+        final userResponse = await _apiService.getUserByEmail(
+          widget.userEmail!,
+        );
         print('User response: $userResponse');
-        
+
         if (userResponse['status'] == 'success') {
           print('User data retrieved successfully: ${userResponse['data']}');
           setState(() {
@@ -77,7 +80,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             _userData = null;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading user data: ${userResponse['message'] ?? 'Unknown error'}')),
+            SnackBar(
+              content: Text(
+                'Error loading user data: ${userResponse['message'] ?? 'Unknown error'}',
+              ),
+            ),
           );
           setState(() {
             _isLoading = false;
@@ -88,7 +95,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         // Show error if no email provided
         print('No email provided in widget');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No email provided. Please log in again.')),
+          const SnackBar(
+            content: Text('No email provided. Please log in again.'),
+          ),
         );
         setState(() {
           _isLoading = false;
@@ -98,45 +107,58 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
 
       // Load student course data from database
       if (_userData != null) {
-        final studentDataResponse = await _apiService.getStudentData(_userData!['userId']);
+        final studentDataResponse = await _apiService.getStudentData(
+          _userData!['userId'],
+        );
         if (studentDataResponse['status'] == 'success') {
           final studentData = studentDataResponse['data'];
           setState(() {
-            _courses = List<Map<String, dynamic>>.from(studentData['courses'] ?? []);
+            _courses = List<Map<String, dynamic>>.from(
+              studentData['courses'] ?? [],
+            );
             _cumulativeGPA = (studentData['cumulativeGPA'] ?? 0.0).toDouble();
             _completedCredits = studentData['completedCredits'] ?? 0;
             _departmentName = studentData['departmentName'] ?? 'No Department';
-            
+
             // Separate current courses from academic records
             _separateCoursesBySemester();
           });
         } else {
           // Show error if API fails
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading student data: ${studentDataResponse['message'] ?? 'Unknown error'}')),
+            SnackBar(
+              content: Text(
+                'Error loading student data: ${studentDataResponse['message'] ?? 'Unknown error'}',
+              ),
+            ),
           );
         }
-        
+
         // Load pending profile changes
-        _pendingProfileChanges = await _apiService.getPendingProfileChangesForUser(_userData!['userId']);
-        
+        _pendingProfileChanges = await _apiService
+            .getPendingProfileChangesForUser(_userData!['userId']);
+
         // Load announcements for students
-        _announcements = await _apiService.getAnnouncementsForUserType('students_only');
+        _announcements = await _apiService.getAnnouncementsForUserType(
+          'students_only',
+        );
       } else {
         // No user data available
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No user data available. Please log in again.')),
+          const SnackBar(
+            content: Text('No user data available. Please log in again.'),
+          ),
         );
       }
-      
+
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
       print('Exception in _loadUserData: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       setState(() {
         _isLoading = false;
       });
@@ -146,32 +168,36 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   void _separateCoursesBySemester() {
     _currentCourses = [];
     _academicRecords = [];
-    
+
     for (var course in _courses) {
       String semester = course['semester']?.toString() ?? '';
       String semesterLower = semester.toLowerCase();
-      
+
       // Current semester detection
       bool isCurrentSemester = false;
-      
+
       // Check for Fall 2024 (current semester)
       if (semesterLower.contains('fall 2024')) {
         isCurrentSemester = true;
-      } 
+      }
       // Spring 2024 is already past
       else if (semesterLower.contains('spring 2024')) {
         isCurrentSemester = false;
       }
       // Check for date patterns (2024-09 through 2024-12)
       else if (semesterLower.contains('2024-09') ||
-               semesterLower.contains('2024-10') ||
-               semesterLower.contains('2024-11') ||
-               semesterLower.contains('2024-12')) {
+          semesterLower.contains('2024-10') ||
+          semesterLower.contains('2024-11') ||
+          semesterLower.contains('2024-12')) {
         isCurrentSemester = true;
       } else if (semesterLower.contains('2024')) {
         // Check if it's a 2024 course without a completed grade
         String? grade = course['grade']?.toString();
-        if (grade == null || grade.isEmpty || grade == '-' || grade == 'I' || grade == 'N/A') {
+        if (grade == null ||
+            grade.isEmpty ||
+            grade == '-' ||
+            grade == 'I' ||
+            grade == 'N/A') {
           // No grade yet = current ongoing course
           isCurrentSemester = true;
         } else {
@@ -182,14 +208,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         // Any other year = past semester
         isCurrentSemester = false;
       }
-      
+
       if (isCurrentSemester) {
         _currentCourses.add(course);
       } else {
         _academicRecords.add(course);
       }
     }
-    
+
     // Sort academic records by semester (most recent first)
     _academicRecords.sort((a, b) {
       String semesterA = a['semester']?.toString() ?? '';
@@ -201,31 +227,67 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   void _loadMockCourseData() {
     setState(() {
       _courses = [
-        {'code': 'CSE112', 'name': 'Introduction to Programming', 'credits': 3, 'grade': 'A', 'semester': 'Fall 2024'},
-        {'code': 'MATH101', 'name': 'Calculus I', 'credits': 3, 'grade': 'B+', 'semester': 'Fall 2024'},
-        {'code': 'PHYS101', 'name': 'Physics I', 'credits': 3, 'grade': 'A-', 'semester': 'Fall 2024'},
-        {'code': 'ENG101', 'name': 'English Composition', 'credits': 2, 'grade': 'A', 'semester': 'Fall 2024'},
-        {'code': 'CSE221', 'name': 'Data Structures', 'credits': 3, 'grade': 'B', 'semester': 'Spring 2024'},
-        {'code': 'MATH102', 'name': 'Calculus II', 'credits': 3, 'grade': 'B+', 'semester': 'Spring 2024'},
+        {
+          'code': 'CSE112',
+          'name': 'Introduction to Programming',
+          'credits': 3,
+          'grade': 'A',
+          'semester': 'Fall 2024',
+        },
+        {
+          'code': 'MATH101',
+          'name': 'Calculus I',
+          'credits': 3,
+          'grade': 'B+',
+          'semester': 'Fall 2024',
+        },
+        {
+          'code': 'PHYS101',
+          'name': 'Physics I',
+          'credits': 3,
+          'grade': 'A-',
+          'semester': 'Fall 2024',
+        },
+        {
+          'code': 'ENG101',
+          'name': 'English Composition',
+          'credits': 2,
+          'grade': 'A',
+          'semester': 'Fall 2024',
+        },
+        {
+          'code': 'CSE221',
+          'name': 'Data Structures',
+          'credits': 3,
+          'grade': 'B',
+          'semester': 'Spring 2024',
+        },
+        {
+          'code': 'MATH102',
+          'name': 'Calculus II',
+          'credits': 3,
+          'grade': 'B+',
+          'semester': 'Spring 2024',
+        },
       ];
-      
+
       // Calculate GPA and credits from mock courses
       double totalPoints = 0.0;
       int totalCredits = 0;
-      
+
       for (var course in _courses) {
         int credits = course['credits'] as int;
         String grade = course['grade'] as String;
-        
+
         totalCredits += credits;
         totalPoints += credits * _getGradePoints(grade);
       }
-      
+
       if (totalCredits > 0) {
         _cumulativeGPA = totalPoints / totalCredits;
         _completedCredits = totalCredits;
       }
-      
+
       // Separate current courses from academic records
       _separateCoursesBySemester();
     });
@@ -233,19 +295,32 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
 
   double _getGradePoints(String grade) {
     switch (grade) {
-      case 'A+': return 4.0;
-      case 'A': return 4.0;
-      case 'A-': return 3.7;
-      case 'B+': return 3.3;
-      case 'B': return 3.0;
-      case 'B-': return 2.7;
-      case 'C+': return 2.3;
-      case 'C': return 2.0;
-      case 'C-': return 1.7;
-      case 'D+': return 1.3;
-      case 'D': return 1.0;
-      case 'F': return 0.0;
-      default: return 0.0;
+      case 'A+':
+        return 4.0;
+      case 'A':
+        return 4.0;
+      case 'A-':
+        return 3.7;
+      case 'B+':
+        return 3.3;
+      case 'B':
+        return 3.0;
+      case 'B-':
+        return 2.7;
+      case 'C+':
+        return 2.3;
+      case 'C':
+        return 2.0;
+      case 'C-':
+        return 1.7;
+      case 'D+':
+        return 1.3;
+      case 'D':
+        return 1.0;
+      case 'F':
+        return 0.0;
+      default:
+        return 0.0;
     }
   }
 
@@ -264,9 +339,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   child: _buildSidebar(),
                 ),
                 // Main Content
-                Expanded(
-                  child: _buildMainContent(),
-                ),
+                Expanded(child: _buildMainContent()),
               ],
             ),
     );
@@ -289,7 +362,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   });
                 },
                 icon: Icon(
-                  _isSidebarExpanded ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
+                  _isSidebarExpanded
+                      ? Icons.arrow_back_ios
+                      : Icons.arrow_forward_ios,
                   color: Colors.white,
                 ),
               ),
@@ -300,11 +375,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.white.withOpacity(0.2),
-              child: const Icon(
-                Icons.person,
-                size: 50,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.person, size: 50, color: Colors.white),
             ),
             const SizedBox(height: 16),
             Text(
@@ -321,11 +392,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.white.withOpacity(0.2),
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.person, size: 20, color: Colors.white),
             ),
             const SizedBox(height: 20),
           ],
@@ -346,12 +413,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                 onPressed: () {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => const UniversityLoginPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const UniversityLoginPage(),
+                    ),
                     (route) => false,
                   );
                 },
                 icon: const Icon(Icons.logout),
-                label: _isSidebarExpanded ? const Text('Logout') : const SizedBox(),
+                label: _isSidebarExpanded
+                    ? const Text('Logout')
+                    : const SizedBox(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
@@ -373,10 +444,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
       ),
       child: ListTile(
         leading: Icon(icon, color: Colors.white),
-        title: _isSidebarExpanded ? Text(
-          title,
-          style: const TextStyle(color: Colors.white),
-        ) : null,
+        title: _isSidebarExpanded
+            ? Text(title, style: const TextStyle(color: Colors.white))
+            : null,
         onTap: () {
           setState(() {
             _selectedIndex = index;
@@ -429,10 +499,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           const SizedBox(height: 8),
           const Text(
             'Welcome to the Faculty SIS System',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 8),
           // Department Display
@@ -457,9 +524,25 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           // KPI Cards
           Row(
             children: [
-              Expanded(child: _buildKPICard('CUMULATIVE GPA', '${_cumulativeGPA.toStringAsFixed(2)}', _cumulativeGPA / 4.0, '4.0', Colors.orange)),
+              Expanded(
+                child: _buildKPICard(
+                  'CUMULATIVE GPA',
+                  _cumulativeGPA.toStringAsFixed(2),
+                  _cumulativeGPA / 4.0,
+                  '4.0',
+                  Colors.orange,
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildKPICard('CREDIT HOURS', '$_completedCredits', _completedCredits / _totalCredits, '$_totalCredits', Colors.green)),
+              Expanded(
+                child: _buildKPICard(
+                  'CREDIT HOURS',
+                  '$_completedCredits',
+                  _completedCredits / _totalCredits,
+                  '$_totalCredits',
+                  Colors.green,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -475,7 +558,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               ),
             ),
             const SizedBox(height: 16),
-            ...(_announcements.map((announcement) => _buildAnnouncementCard(announcement)).toList()),
+            ...(_announcements
+                .map((announcement) => _buildAnnouncementCard(announcement))
+                .toList()),
             const SizedBox(height: 32),
           ],
 
@@ -497,9 +582,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             mainAxisSpacing: 16,
             childAspectRatio: 1.5,
             children: [
-              _buildQuickAccessCard('My Courses', Icons.book, () => setState(() => _selectedIndex = 2)),
-              _buildQuickAccessCard('Study Materials', Icons.library_books, () => setState(() => _selectedIndex = 3)),
-              _buildQuickAccessCard('Academic Records', Icons.history_edu, () => setState(() => _selectedIndex = 4)),
+              _buildQuickAccessCard(
+                'My Courses',
+                Icons.book,
+                () => setState(() => _selectedIndex = 2),
+              ),
+              _buildQuickAccessCard(
+                'Study Materials',
+                Icons.library_books,
+                () => setState(() => _selectedIndex = 3),
+              ),
+              _buildQuickAccessCard(
+                'Academic Records',
+                Icons.history_edu,
+                () => setState(() => _selectedIndex = 4),
+              ),
             ],
           ),
         ],
@@ -507,7 +604,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     );
   }
 
-  Widget _buildKPICard(String label, String value, double progress, String maxValue, Color color) {
+  Widget _buildKPICard(
+    String label,
+    String value,
+    double progress,
+    String maxValue,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -530,10 +633,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               const SizedBox(height: 8),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 16),
               LinearProgressIndicator(
@@ -565,7 +665,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     );
   }
 
-  Widget _buildQuickAccessCard(String title, IconData icon, VoidCallback onTap) {
+  Widget _buildQuickAccessCard(
+    String title,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return Card(
       elevation: 2,
       child: InkWell(
@@ -575,19 +679,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+            children: [
               Icon(icon, size: 32, color: const Color(0xFF1E3A8A)),
               const SizedBox(height: 8),
-            Text(
+              Text(
                 title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -596,12 +700,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   Widget _buildProfile() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-            child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+            children: [
               const Text(
                 'Profile Information',
                 style: TextStyle(
@@ -622,7 +726,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             ],
           ),
           const SizedBox(height: 24),
-          
+
           // Pending Changes Notification
           if (_pendingProfileChanges.isNotEmpty)
             Container(
@@ -654,32 +758,31 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   const SizedBox(height: 8),
                   Text(
                     'You have ${_pendingProfileChanges.length} profile change(s) waiting for admin approval. Changes will be applied once approved.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.orange[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                   ),
                   const SizedBox(height: 8),
-                  ..._pendingProfileChanges.map((change) => Padding(
-                    padding: const EdgeInsets.only(left: 24, top: 4),
-                    child: Text(
-                      '• ${change['fieldName']?.toString().toUpperCase()}: "${change['oldValue']}" → "${change['newValue']}"',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange[600],
+                  ..._pendingProfileChanges.map(
+                    (change) => Padding(
+                      padding: const EdgeInsets.only(left: 24, top: 4),
+                      child: Text(
+                        '• ${change['fieldName']?.toString().toUpperCase()}: "${change['oldValue']}" → "${change['newValue']}"',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[600],
+                        ),
                       ),
                     ),
-                  )).toList(),
+                  ),
                 ],
               ),
             ),
-          
+
           Card(
             elevation: 4,
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
-                    children: [
+                children: [
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.1),
@@ -690,13 +793,35 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildProfileField('Full Name', _userData?['name']?.toString() ?? 'N/A'),
-                  _buildProfileField('Email', _userData?['email']?.toString() ?? 'N/A'),
-                  _buildProfileField('Official Email', _userData?['officialMail']?.toString() ?? 'N/A'),
-                  _buildProfileField('Phone', _userData?['phone']?.toString() ?? 'N/A'),
-                  _buildProfileField('Location', _userData?['location']?.toString() ?? 'N/A'),
-                  _buildProfileField('National ID', _userData?['nationalId']?.toString() ?? 'N/A'),
-                  _buildProfileField('Status', _userData?['accountStatus']?.toString().toUpperCase() ?? 'N/A'),
+                  _buildProfileField(
+                    'Full Name',
+                    _userData?['name']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'Email',
+                    _userData?['email']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'Official Email',
+                    _userData?['officialMail']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'Phone',
+                    _userData?['phone']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'Location',
+                    _userData?['location']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'National ID',
+                    _userData?['nationalId']?.toString() ?? 'N/A',
+                  ),
+                  _buildProfileField(
+                    'Status',
+                    _userData?['accountStatus']?.toString().toUpperCase() ??
+                        'N/A',
+                  ),
                 ],
               ),
             ),
@@ -710,8 +835,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           SizedBox(
             width: 120,
             child: Text(
@@ -722,12 +847,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
         ],
       ),
     );
@@ -745,19 +865,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         children: [
           const Text(
             'My Courses',
-                            style: TextStyle(
+            style: TextStyle(
               fontSize: 24,
-                              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.bold,
               color: Color(0xFF1E3A8A),
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Current Semester Courses',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 24),
           // Course Statistics
@@ -769,43 +886,70 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text('Current Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('${_currentCourses.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const Text('Completed Credits', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('$_completedCredits', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const Text('Current GPA', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('$_cumulativeGPA', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                            ),
+                        const Text(
+                          'Current Courses',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '${_currentCourses.length}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Completed Credits',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '$_completedCredits',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Current GPA',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '$_cumulativeGPA',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           // Course List
           if (_currentCourses.isEmpty)
@@ -825,41 +969,47 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               ),
             )
           else
-            ..._currentCourses.map((course) => Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getGradeColor(course['grade']).withOpacity(0.2),
-                child: Text(
-                  course['grade'],
-                  style: TextStyle(
-                    color: _getGradeColor(course['grade']),
-                    fontWeight: FontWeight.bold,
+            ..._currentCourses.map(
+              (course) => Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getGradeColor(
+                      course['grade'],
+                    ).withOpacity(0.2),
+                    child: Text(
+                      course['grade'],
+                      style: TextStyle(
+                        color: _getGradeColor(course['grade']),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
+                  title: Text(
+                    course['code'],
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(course['name']),
+                      Text(
+                        '${course['credits']} Credits • ${course['semester']}',
+                      ),
+                    ],
+                  ),
+                  trailing: Text(
+                    course['grade'],
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: _getGradeColor(course['grade']),
+                    ),
+                  ),
+                  onTap: () => _navigateToCourseDetails(course),
                 ),
               ),
-              title: Text(
-                course['code'],
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(course['name']),
-                  Text('${course['credits']} Credits • ${course['semester']}'),
-                ],
-              ),
-              trailing: Text(
-                course['grade'],
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _getGradeColor(course['grade']),
-                ),
-              ),
-              onTap: () => _navigateToCourseDetails(course),
             ),
-          )).toList(),
         ],
       ),
     );
@@ -882,10 +1032,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           const SizedBox(height: 8),
           const Text(
             'Past Semesters & Grades',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 24),
           // Semester Stats
@@ -897,8 +1044,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text('Total Semesters', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('${_getUniqueSemesters().length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Total Semesters',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '${_getUniqueSemesters().length}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -911,8 +1067,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text('Total Courses', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('${_academicRecords.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Total Courses',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '${_academicRecords.length}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -925,8 +1090,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text('Credits Earned', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        Text('$_completedCredits', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Credits Earned',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        Text(
+                          '$_completedCredits',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -996,10 +1170,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               const Spacer(),
               Text(
                 '${courses.length} course(s)',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white70,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.white70),
               ),
             ],
           ),
@@ -1007,59 +1178,71 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
       );
 
       // Courses in this semester
-      widgets.addAll(courses.map((course) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          leading: CircleAvatar(
-            backgroundColor: _getGradeColor(course['grade']).withOpacity(0.2),
-            child: Text(
-              course['grade'],
-              style: TextStyle(
-                color: _getGradeColor(course['grade']),
-                fontWeight: FontWeight.bold,
+      widgets.addAll(
+        courses.map(
+          (course) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
-            ),
-          ),
-          title: Text(
-            course['code'],
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(course['name']),
-              const SizedBox(height: 4),
-              Text(
-                '${course['credits']} Credits',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                course['grade'],
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _getGradeColor(course['grade']),
+              leading: CircleAvatar(
+                backgroundColor: _getGradeColor(
+                  course['grade'],
+                ).withOpacity(0.2),
+                child: Text(
+                  course['grade'],
+                  style: TextStyle(
+                    color: _getGradeColor(course['grade']),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ],
+              title: Text(
+                course['code'],
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(course['name']),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${course['credits']} Credits',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    course['grade'],
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: _getGradeColor(course['grade']),
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () => _navigateToCourseDetails(course),
+            ),
           ),
-          onTap: () => _navigateToCourseDetails(course),
         ),
-      )));
+      );
     });
 
     return widgets;
   }
 
   List<String> _getUniqueSemesters() {
-    return _academicRecords.map((course) => course['semester']?.toString() ?? '').toSet().toList();
+    return _academicRecords
+        .map((course) => course['semester']?.toString() ?? '')
+        .toSet()
+        .toList();
   }
 
   void _navigateToCourseDetails(Map<String, dynamic> course) {
@@ -1075,8 +1258,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Text(
             'Student Services',
             style: TextStyle(
@@ -1104,10 +1287,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   height: 400,
                   child: TabBarView(
                     controller: _tabController,
-                    children: [
-                      _buildCourseRegistration(),
-                      _buildFees(),
-                    ],
+                    children: [_buildCourseRegistration(), _buildFees()],
                   ),
                 ),
               ],
@@ -1125,10 +1305,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         children: [
           const Text(
             'Course Registration',
-                            style: TextStyle(
-              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -1139,7 +1316,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
           ElevatedButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Course registration feature coming soon!')),
+                const SnackBar(
+                  content: Text('Course registration feature coming soon!'),
+                ),
               );
             },
             icon: const Icon(Icons.add),
@@ -1148,9 +1327,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
               backgroundColor: const Color(0xFF1E3A8A),
               foregroundColor: Colors.white,
             ),
-                          ),
-                        ],
-                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1161,10 +1340,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
         children: [
           const Text(
             'Fees Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Card(
@@ -1176,7 +1352,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Tuition Fees'),
-                      Text('\$2,500', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '\$2,500',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1184,7 +1363,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Registration Fees'),
-                      Text('\$100', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '\$100',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1192,8 +1374,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text('\$2,600', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '\$2,600',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -1202,7 +1397,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                     child: ElevatedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Payment feature coming soon!')),
+                          const SnackBar(
+                            content: Text('Payment feature coming soon!'),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -1243,11 +1440,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   }
 
   Future<void> _showEditProfileDialog() async {
-    final TextEditingController nameController = TextEditingController(text: _userData?['name']?.toString() ?? '');
-    final TextEditingController emailController = TextEditingController(text: _userData?['email']?.toString() ?? '');
-    final TextEditingController nationalIdController = TextEditingController(text: _userData?['nationalId']?.toString() ?? '');
-    final TextEditingController phoneController = TextEditingController(text: _userData?['phone']?.toString() ?? '');
-    final TextEditingController locationController = TextEditingController(text: _userData?['location']?.toString() ?? '');
+    final TextEditingController nameController = TextEditingController(
+      text: _userData?['name']?.toString() ?? '',
+    );
+    final TextEditingController emailController = TextEditingController(
+      text: _userData?['email']?.toString() ?? '',
+    );
+    final TextEditingController nationalIdController = TextEditingController(
+      text: _userData?['nationalId']?.toString() ?? '',
+    );
+    final TextEditingController phoneController = TextEditingController(
+      text: _userData?['phone']?.toString() ?? '',
+    );
+    final TextEditingController locationController = TextEditingController(
+      text: _userData?['location']?.toString() ?? '',
+    );
     final TextEditingController passwordController = TextEditingController();
 
     await showDialog(
@@ -1291,13 +1498,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Full Name', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Full Name',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: nameController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1308,13 +1524,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Personal Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Personal Email',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: emailController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1329,13 +1554,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('National ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'National ID',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: nationalIdController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1346,13 +1580,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Phone Number', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Phone Number',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: phoneController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1367,13 +1610,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'Location',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: locationController,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1384,14 +1636,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('New Password (Leave empty to keep current)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    'New Password (Leave empty to keep current)',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: passwordController,
                                     obscureText: true,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1404,7 +1665,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Official Email (Cannot be changed)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            const Text(
+                              'Official Email (Cannot be changed)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               enabled: false,
@@ -1412,9 +1679,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                                 border: const OutlineInputBorder(),
                                 filled: true,
                                 fillColor: Colors.grey[200],
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                               ),
-                              controller: TextEditingController(text: _userData?['officialMail']?.toString() ?? ''),
+                              controller: TextEditingController(
+                                text:
+                                    _userData?['officialMail']?.toString() ??
+                                    '',
+                              ),
                             ),
                           ],
                         ),
@@ -1452,28 +1726,37 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () async {
                         if (nameController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Name cannot be empty')),
+                            const SnackBar(
+                              content: Text('Name cannot be empty'),
+                            ),
                           );
                           return;
                         }
 
                         if (emailController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Email cannot be empty')),
+                            const SnackBar(
+                              content: Text('Email cannot be empty'),
+                            ),
                           );
                           return;
                         }
 
                         if (nationalIdController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('National ID cannot be empty')),
+                            const SnackBar(
+                              content: Text('National ID cannot be empty'),
+                            ),
                           );
                           return;
                         }
@@ -1490,21 +1773,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                           };
 
                           if (passwordController.text.trim().isNotEmpty) {
-                            updateData['password'] = passwordController.text.trim();
+                            updateData['password'] = passwordController.text
+                                .trim();
                           }
 
-                          final result = await _apiService.updateUser(updateData);
+                          final result = await _apiService.updateUser(
+                            updateData,
+                          );
 
                           if (result['status'] == 'success') {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(result['message'])),
                             );
-                            
+
                             // Don't update local data - student should see old data until admin approves
                             // Only refresh pending profile changes to show the notification
-                            _pendingProfileChanges = await _apiService.getPendingProfileChangesForUser(_userData!['userId']);
+                            _pendingProfileChanges = await _apiService
+                                .getPendingProfileChangesForUser(
+                                  _userData!['userId'],
+                                );
                             setState(() {});
-                            
+
                             Navigator.of(context).pop();
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1513,16 +1802,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                           }
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error updating profile: $e')),
+                            SnackBar(
+                              content: Text('Error updating profile: $e'),
+                            ),
                           );
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
-                      child: const Text('Save Changes', style: TextStyle(fontSize: 16)),
+                      child: const Text(
+                        'Save Changes',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -1535,8 +1832,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
   }
 
   Widget _buildAnnouncementCard(Map<String, dynamic> announcement) {
-    Color priorityColor = _getPriorityColor(announcement['priority']?.toString() ?? 'medium');
-    
+    Color priorityColor = _getPriorityColor(
+      announcement['priority']?.toString() ?? 'medium',
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -1560,13 +1859,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: priorityColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    (announcement['priority']?.toString() ?? 'medium').toUpperCase(),
+                    (announcement['priority']?.toString() ?? 'medium')
+                        .toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -1577,10 +1880,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Ti
                 const Spacer(),
                 Text(
                   _formatDate(announcement['createdAt']?.toString()),
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
