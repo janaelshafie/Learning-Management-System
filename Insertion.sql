@@ -16,29 +16,35 @@ SET FOREIGN_KEY_CHECKS = 0;
 INSERT INTO `User` (user_id, national_id, name, email, official_mail, password_hash, role) VALUES 
 (1, '1000000001', 'System Admin', 'admin@lms.edu', 'admin@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'admin');
 
--- 5 Professors (Department Heads)
+-- 6 Professors (5 Dept Heads + 1 ASU Courses Coordinator)
 INSERT INTO `User` (user_id, national_id, name, email, official_mail, password_hash, role) VALUES 
 (101, '2000000101', 'Prof. Ahmed CSE', 'ahmed.cse@uni.edu', 'head.cse@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor'),
 (102, '2000000102', 'Prof. Sarah ARC', 'sarah.arc@uni.edu', 'head.arc@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor'),
 (103, '2000000103', 'Prof. Mohamed MEP', 'mohamed.mep@uni.edu', 'head.mep@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor'),
 (104, '2000000104', 'Prof. Laila ECE', 'laila.ece@uni.edu', 'head.ece@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor'),
-(105, '2000000105', 'Prof. Omar CES', 'omar.ces@uni.edu', 'head.ces@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor');
+(105, '2000000105', 'Prof. Omar CES', 'omar.ces@uni.edu', 'head.ces@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor'),
+(106, '2000000106', 'Dr. Amira ASU', 'amira.asu@uni.edu', 'coordinator.asu@uni.edu', '$2a$10$gXiUrze2SeHjoQnMu01LPuaMA..6hshvYEF82Bc7ackAL5NQdjIO6', 'instructor');
 
-INSERT INTO Instructor (instructor_id, instructor_type, office_hours) VALUES
-(101, 'professor', 'Sun/Tue 10-12'), (102, 'professor', 'Mon/Wed 10-12'),
-(103, 'professor', 'Sun/Thu 12-2'), (104, 'professor', 'Tue/Thu 9-11'),
-(105, 'professor', 'Mon/Wed 1-3');
+INSERT INTO Instructor (instructor_id, instructor_type, office_hours, department_id) VALUES
+(101, 'professor', 'Sun/Tue 10-12', 1),   -- Prof. Ahmed -> CSE (Dept 1)
+(102, 'professor', 'Mon/Wed 10-12', 2),   -- Prof. Sarah -> ARC (Dept 2)
+(103, 'professor', 'Sun/Thu 12-2', 3),    -- Prof. Mohamed -> MEP (Dept 3)
+(104, 'professor', 'Tue/Thu 9-11', 4),    -- Prof. Laila -> ECE (Dept 4)
+(105, 'professor', 'Mon/Wed 1-3', 5),     -- Prof. Omar -> CES (Dept 5)
+(106, 'professor', 'Tue/Thu 2-4', 6);     -- Dr. Amira -> ASU Courses (Dept 6)
 
 -- -----------------------------------------------------
 -- 2. Insert Departments (5 Selected)
 -- -----------------------------------------------------
 
+-- Insert Departments (5 Selected + ASU Courses)
 INSERT INTO Department (department_id, name, unit_head_id) VALUES
 (1, 'Computer and Systems Engineering', 101),
 (2, 'Architecture Engineering', 102),
 (3, 'Mechanical Power Engineering', 103),
 (4, 'Electronics and Communication Engineering', 104),
-(5, 'Structural Engineering', 105);
+(5, 'Structural Engineering', 105),
+(6, 'ASU Courses', 106);
 
 -- -----------------------------------------------------
 -- 3. Insert Students (2 Per Dept)
@@ -148,7 +154,8 @@ SELECT 1, course_id, 'core' FROM Course WHERE course_id BETWEEN 101 AND 125 UNIO
 SELECT 2, course_id, 'core' FROM Course WHERE course_id BETWEEN 201 AND 225 UNION ALL
 SELECT 3, course_id, 'core' FROM Course WHERE course_id BETWEEN 301 AND 325 UNION ALL
 SELECT 4, course_id, 'core' FROM Course WHERE course_id BETWEEN 401 AND 425 UNION ALL
-SELECT 5, course_id, 'core' FROM Course WHERE course_id BETWEEN 501 AND 525;
+SELECT 5, course_id, 'core' FROM Course WHERE course_id BETWEEN 501 AND 525 UNION ALL
+SELECT 6, course_id, 'core' FROM Course WHERE course_id BETWEEN 1 AND 10;
 
 -- -----------------------------------------------------
 -- 6. OFFERED COURSES & SECTIONS GENERATION

@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 // Imports for the new structure
 import '../../services/api_services.dart'; // For ApiService
 import '../../common/app_state.dart'; // For global state variables
-import '../home/my_home_page.dart';      // For navigation to MyHomePage
+import '../home/my_home_page.dart'; // For navigation to MyHomePage
 import '../student/student_dashboard_screen.dart'; // For student dashboard
 // TODO: Uncomment when instructor dashboard is implemented
 // import '../instructor/instructor_dashboard_screen.dart'; // For instructor dashboard
-import 'signup_screen.dart';              // For signup screen navigation
-import '../admin/admin_dashboard_screen.dart'; // For admin dashboard
+import 'signup_screen.dart'; // For signup screen navigation
+import '../admin/admin_main_screen.dart'; // For admin dashboard
 
 class UniversityLoginPage extends StatefulWidget {
   const UniversityLoginPage({super.key});
@@ -24,8 +24,7 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
 
   final ApiService _apiService = ApiService();
 
-
-////************************this is the real function for login********************************* */
+  ////************************this is the real function for login********************************* */
   Future<void> _handleLogin() async {
     final email = _idController.text.trim();
     final password = _passwordController.text.trim();
@@ -41,14 +40,15 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
       isStudent = false;
       isInstructor = false;
       isAdmin = false;
-      
+      currentUserId = result['userId'] ?? 0; // Store the current user ID
+
       if (result['role'] == 'admin') {
         isAdmin = true;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
-      } 
+      }
       // TODO: Uncomment when instructor dashboard is implemented
       // else if (result['role'] == 'instructor') {
       //   isInstructor = true;
@@ -56,12 +56,14 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
       //     context,
       //     MaterialPageRoute(builder: (_) => const InstructorScreen()),
       //   );
-      // } 
+      // }
       else if (result['role'] == 'instructor') {
         // Instructor dashboard is not implemented yet
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Instructor dashboard is not implemented yet. Please contact the administrator.'),
+            content: Text(
+              'Instructor dashboard is not implemented yet. Please contact the administrator.',
+            ),
             duration: Duration(seconds: 4),
             backgroundColor: Colors.orange,
           ),
@@ -72,7 +74,9 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
         isStudent = true;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => StudentDashboardScreen(userEmail: email)),
+          MaterialPageRoute(
+            builder: (_) => StudentDashboardScreen(userEmail: email),
+          ),
         );
       } else {
         Navigator.pushReplacement(
@@ -87,9 +91,8 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
     }
   }
 
-
-//************************this is a dummy function for login********************************* */
-// TEMPORARY FUNCTION FOR TESTING WITHOUT BACKEND
+  //************************this is a dummy function for login********************************* */
+  // TEMPORARY FUNCTION FOR TESTING WITHOUT BACKEND
   // Future<void> _handleLogin() async {
   //   // We comment out the real API call:
   //   // final email = _idController.text.trim();
@@ -115,9 +118,6 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
   //   }
   // }
 
-
-
-  
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -160,9 +160,9 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
                   Text(
                     "University App",
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   SizedBox(height: 30),
                   // Use Form widget

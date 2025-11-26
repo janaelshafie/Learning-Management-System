@@ -4,7 +4,7 @@ import '../../services/api_services.dart';
 
 class StudyMaterialsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> currentCourses;
-  
+
   const StudyMaterialsScreen({super.key, required this.currentCourses});
 
   @override
@@ -13,8 +13,8 @@ class StudyMaterialsScreen extends StatefulWidget {
 
 class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
   final ApiService _apiService = ApiService();
-  bool _isLoading = false;
-  
+  final bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,100 +32,107 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : widget.currentCourses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.book_outlined, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No courses for current semester',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book_outlined, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No courses for current semester',
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: widget.currentCourses.length,
-                  itemBuilder: (context, index) {
-                    final course = widget.currentCourses[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      elevation: 2,
-                      child: InkWell(
-                        onTap: () => _navigateToCourseMaterials(context, course),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: widget.currentCourses.length,
+              itemBuilder: (context, index) {
+                final course = widget.currentCourses[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  elevation: 2,
+                  child: InkWell(
+                    onTap: () => _navigateToCourseMaterials(context, course),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.book,
+                              color: Color(0xFF1E3A8A),
+                              size: 30,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  course['code'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  Icons.book,
-                                  color: Color(0xFF1E3A8A),
-                                  size: 30,
+                                const SizedBox(height: 4),
+                                Text(
+                                  course['name'] ?? 'Course Name',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                const SizedBox(height: 4),
+                                Row(
                                   children: [
-                                    Text(
-                                      course['code'] ?? 'N/A',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    Icon(
+                                      Icons.person,
+                                      size: 14,
+                                      color: Colors.grey[500],
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      course['name'] ?? 'Course Name',
+                                      course['instructor'] ?? 'Instructor',
                                       style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                        color: Colors.grey[500],
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.person, size: 14, color: Colors.grey[500]),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          course['instructor'] ?? 'Instructor',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 20,
-                                color: Colors.grey,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 
-  void _navigateToCourseMaterials(BuildContext context, Map<String, dynamic> course) {
+  void _navigateToCourseMaterials(
+    BuildContext context,
+    Map<String, dynamic> course,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -144,7 +151,8 @@ class CourseMaterialsScreen extends StatefulWidget {
   State<CourseMaterialsScreen> createState() => _CourseMaterialsScreenState();
 }
 
-class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with SingleTickerProviderStateMixin {
+class _CourseMaterialsScreenState extends State<CourseMaterialsScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late TabController _tabController;
   bool _isLoading = true;
@@ -179,8 +187,12 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
 
       if (_offeredCourseId != null) {
         // Load announcements and materials
-        final announcements = await _apiService.getCourseAnnouncements(_offeredCourseId!);
-        final materials = await _apiService.getCourseMaterials(_offeredCourseId!);
+        final announcements = await _apiService.getCourseAnnouncements(
+          _offeredCourseId!,
+        );
+        final materials = await _apiService.getCourseMaterials(
+          _offeredCourseId!,
+        );
 
         setState(() {
           _announcements = announcements;
@@ -222,10 +234,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
-              children: [
-                _buildAnnouncementsTab(),
-                _buildMaterialsTab(),
-              ],
+              children: [_buildAnnouncementsTab(), _buildMaterialsTab()],
             ),
     );
   }
@@ -236,7 +245,11 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.announcement_outlined, size: 64, color: Colors.grey[400]),
+            Icon(
+              Icons.announcement_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
             const SizedBox(height: 16),
             Text(
               'No announcements yet',
@@ -263,7 +276,10 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E3A8A).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -280,10 +296,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
                     const Spacer(),
                     Text(
                       _formatDate(announcement['createdAt']?.toString()),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -341,9 +354,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
             leading: _getMaterialIcon(material['type']?.toString() ?? 'file'),
             title: Text(
               material['title'] ?? 'Untitled',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,10 +363,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
                 const SizedBox(height: 4),
                 Text(
                   _formatDate(material['uploadedAt']?.toString()),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -416,9 +424,9 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> with Sing
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error opening file: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
         }
       }
     }
