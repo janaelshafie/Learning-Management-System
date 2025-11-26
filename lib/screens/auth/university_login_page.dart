@@ -8,7 +8,7 @@ import '../student/student_dashboard_screen.dart'; // For student dashboard
 // TODO: Uncomment when instructor dashboard is implemented
 // import '../instructor/instructor_dashboard_screen.dart'; // For instructor dashboard
 import 'signup_screen.dart'; // For signup screen navigation
-import '../admin/admin_dashboard_screen.dart'; // For admin dashboard
+import '../admin/admin_main_screen.dart'; // For admin dashboard
 
 class UniversityLoginPage extends StatefulWidget {
   const UniversityLoginPage({super.key});
@@ -46,7 +46,7 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
         isAdmin = true;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
       }
       // TODO: Uncomment when instructor dashboard is implemented

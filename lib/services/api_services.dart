@@ -1017,6 +1017,54 @@ class ApiService {
     }
   }
 
+  // Create a new semester
+  Future<Map<String, dynamic>> createSemester(
+    Map<String, dynamic> semesterData,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/semesters/create');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(semesterData),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Update a semester
+  Future<Map<String, dynamic>> updateSemester(
+    Map<String, dynamic> semesterData,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/semesters/update');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(semesterData),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
   // Get courses for a department
   Future<Map<String, dynamic>> getCoursesByDepartment(int departmentId) async {
     final url = Uri.parse(
