@@ -3,9 +3,11 @@ package com.asu_lms.lms.Controllers;
 import com.asu_lms.lms.Entities.Department;
 import com.asu_lms.lms.Entities.Course;
 import com.asu_lms.lms.Entities.User;
+import com.asu_lms.lms.Entities.Instructor;
 import com.asu_lms.lms.Repositories.DepartmentRepository;
 import com.asu_lms.lms.Repositories.CourseRepository;
 import com.asu_lms.lms.Repositories.UserRepository;
+import com.asu_lms.lms.Repositories.InstructorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
@@ -23,6 +25,9 @@ public class DepartmentController {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private InstructorRepository instructorRepository;
 
     // Get all departments
     @GetMapping("/all")
@@ -327,12 +332,37 @@ public class DepartmentController {
     // Get all instructors (for unit head selection)
     @GetMapping("/instructors")
     public Map<String, Object> getAllInstructors() {
-        List<User> instructors = userRepository.findByRole("instructor");
+        List<User> instructorUsers = userRepository.findByRole("instructor");
+        
+        // Enhance with instructor details
+        List<Map<String, Object>> enhancedInstructors = new ArrayList<>();
+        for (User user : instructorUsers) {
+            Map<String, Object> instructorData = new HashMap<>();
+            instructorData.put("userId", user.getUserId());
+            instructorData.put("name", user.getName());
+            instructorData.put("email", user.getEmail());
+            instructorData.put("officialMail", user.getOfficialMail());
+            instructorData.put("phone", user.getPhone());
+            instructorData.put("location", user.getLocation());
+            instructorData.put("nationalId", user.getNationalId());
+            instructorData.put("role", user.getRole());
+            
+            // Get instructor-specific data
+            Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(user.getUserId());
+            if (instructorOpt.isPresent()) {
+                Instructor instructor = instructorOpt.get();
+                instructorData.put("instructorType", instructor.getInstructorType());
+                instructorData.put("officeHours", instructor.getOfficeHours());
+                instructorData.put("departmentId", instructor.getDepartmentId());
+            }
+            
+            enhancedInstructors.add(instructorData);
+        }
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
-        response.put("instructors", instructors);
-        response.put("count", instructors.size());
+        response.put("instructors", enhancedInstructors);
+        response.put("count", enhancedInstructors.size());
         
         return response;
     }

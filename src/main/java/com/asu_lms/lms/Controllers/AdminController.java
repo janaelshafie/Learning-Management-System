@@ -871,7 +871,19 @@ public class AdminController {
             if ("student".equals(role)) {
                 Student student = new Student();
                 student.setStudentId(savedUser.getUserId());
-                student.setStudentUid("S-" + savedUser.getUserId());
+                
+                // Set student UID if provided, otherwise auto-generate
+                if (request.containsKey("studentUid") && request.get("studentUid") != null) {
+                    String studentUid = (String) request.get("studentUid");
+                    if (!studentUid.trim().isEmpty()) {
+                        student.setStudentUid(studentUid.trim());
+                    } else {
+                        student.setStudentUid("S-" + savedUser.getUserId());
+                    }
+                } else {
+                    student.setStudentUid("S-" + savedUser.getUserId());
+                }
+                
                 student.setCumulativeGpa(new java.math.BigDecimal("0.00"));
                 
                 // Set department if provided
@@ -886,6 +898,18 @@ public class AdminController {
                     student.setDepartmentId(departmentId);
                 }
                 
+                // Set advisor if provided
+                if (request.containsKey("advisorId")) {
+                    Object advisorIdObj = request.get("advisorId");
+                    Integer advisorId;
+                    if (advisorIdObj instanceof String) {
+                        advisorId = Integer.parseInt((String) advisorIdObj);
+                    } else {
+                        advisorId = (Integer) advisorIdObj;
+                    }
+                    student.setAdvisorId(advisorId);
+                }
+                
                 studentRepository.save(student);
             } else if ("instructor".equals(role)) {
                 Instructor instructor = new Instructor();
@@ -897,6 +921,26 @@ public class AdminController {
                     instructor.setInstructorType(instructorType);
                 } else {
                     instructor.setInstructorType("professor"); // Default
+                }
+                
+                // Set department if provided
+                if (request.containsKey("departmentId")) {
+                    Object deptIdObj = request.get("departmentId");
+                    Integer departmentId;
+                    if (deptIdObj instanceof String) {
+                        departmentId = Integer.parseInt((String) deptIdObj);
+                    } else {
+                        departmentId = (Integer) deptIdObj;
+                    }
+                    instructor.setDepartmentId(departmentId);
+                }
+                
+                // Set office hours if provided
+                if (request.containsKey("officeHours")) {
+                    String officeHours = (String) request.get("officeHours");
+                    if (officeHours != null && !officeHours.trim().isEmpty()) {
+                        instructor.setOfficeHours(officeHours.trim());
+                    }
                 }
                 
                 instructorRepository.save(instructor);
