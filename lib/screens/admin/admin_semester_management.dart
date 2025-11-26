@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
+import 'admin_semester_details_page.dart';
 
 class AdminSemesterManagement extends StatefulWidget {
   const AdminSemesterManagement({super.key});
@@ -508,11 +509,25 @@ class _AdminSemesterManagementState extends State<AdminSemesterManagement> {
         : status == 'Upcoming'
             ? Colors.blue
             : Colors.grey;
+    
+    // Determine if it's read-only (past semesters are read-only)
+    final isReadOnly = status == 'Past';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: status == 'Past' ? () => _showSemesterDetails(semester) : null,
+        onTap: () {
+          // Navigate to details page for all semesters
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminSemesterDetailsPage(
+                semester: semester,
+                isReadOnly: isReadOnly,
+              ),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -560,17 +575,11 @@ class _AdminSemesterManagementState extends State<AdminSemesterManagement> {
                       ),
                     ),
                   ),
-                  if (editable) ...[
+                  if (editable && !isReadOnly) ...[
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.edit, size: 20),
                       onPressed: () => _showEditSemesterDialog(semester),
-                    ),
-                  ] else if (status == 'Past') ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
-                      onPressed: () => _showSemesterDetails(semester),
                     ),
                   ],
                 ],
@@ -582,186 +591,5 @@ class _AdminSemesterManagementState extends State<AdminSemesterManagement> {
     );
   }
 
-  Future<void> _showSemesterDetails(Map<String, dynamic> semester) async {
-    bool isLoading = true;
-    List<dynamic> allOfferedCourses = [];
-    List<dynamic> departments = [];
-
-    // Load all departments
-    try {
-      final deptResponse = await _apiService.getAllDepartments();
-      if (deptResponse['status'] == 'success') {
-        departments = deptResponse['departments'] ?? [];
-      }
-
-      // Load offered courses for each department
-      for (var dept in departments) {
-        try {
-          final offeredResponse = await _apiService.getOfferedCourses(
-            semester['semesterId'],
-            dept['departmentId'],
-          );
-          if (offeredResponse['status'] == 'success') {
-            final courses = offeredResponse['offeredCourses'] ?? [];
-            for (var course in courses) {
-              course['departmentName'] = dept['name'];
-              allOfferedCourses.add(course);
-            }
-          }
-        } catch (e) {
-          // Continue with next department
-        }
-      }
-      isLoading = false;
-    } catch (e) {
-      isLoading = false;
-    }
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(semester['name'] ?? 'Semester Details'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Semester Info
-                Text(
-                  'Start Date: ${_formatDate(semester['startDate'])}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'End Date: ${_formatDate(semester['endDate'])}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Registration Open: ${semester['registrationOpen'] == true ? 'Yes' : 'No'}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                // Offered Courses
-                const Text(
-                  'Offered Courses:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (allOfferedCourses.isEmpty)
-                  Text(
-                    'No courses were offered in this semester',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  )
-                else
-                  ...allOfferedCourses.map((course) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${course['courseCode'] ?? ''} - ${course['title'] ?? 'Unknown'}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Department: ${course['departmentName'] ?? 'Unknown'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Credits: ${course['credits'] ?? 'N/A'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          if (course['instructor'] != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.person,
-                                  size: 14,
-                                  color: Colors.blue,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Instructor: ${course['instructor']['name'] ?? 'Unknown'}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Instructor: Not Assigned',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  }).toList(),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 

@@ -181,14 +181,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'View Profile',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 12,
-                        ),
-                      ),
                       const SizedBox(height: 16),
                       // Logout Button
                       SizedBox(

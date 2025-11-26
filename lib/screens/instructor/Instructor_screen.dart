@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
 import '../auth/university_login_page.dart';
 import '../student/course_details_screen.dart';
-import '../student/study_materials_screen.dart';
 
 class InstructorScreen extends StatefulWidget {
   final String? userEmail;
@@ -71,23 +70,36 @@ class _InstructorScreenState extends State<InstructorScreen>
 
       _userData = userResponse['data'];
 
-      // TODO: replace these with your real instructor endpoints
-      final instructorData =
-      await _apiService.getInstructorData(_userData!['userId']);
-      if (instructorData['status'] == 'success') {
-        final data = instructorData['data'];
-        setState(() {
-          _allCourses =
-          List<Map<String, dynamic>>.from(data['courses'] ?? []);
-          _studentsCount = data['studentsCount'] ?? 0;
-          _pendingRequests = data['pendingRequests'] ?? 0;
-          _officeHours =
-          List<Map<String, dynamic>>.from(data['officeHours'] ?? []);
-        });
+      // Load instructor-specific data
+      try {
+        final instructorData =
+        await _apiService.getInstructorData(_userData!['userId']);
+        if (instructorData['status'] == 'success') {
+          final data = instructorData['data'] ?? {};
+          setState(() {
+            _allCourses =
+            List<Map<String, dynamic>>.from(data['courses'] ?? []);
+            _studentsCount = data['studentsCount'] ?? 0;
+            _pendingRequests = data['pendingRequests'] ?? 0;
+            _officeHours =
+            List<Map<String, dynamic>>.from(data['officeHours'] ?? []);
+          });
+        }
+      } catch (e) {
+        // If instructor data fails to load, continue with empty data
+        print('Error loading instructor data: $e');
       }
 
-      _announcements =
-      await _apiService.getAnnouncementsForUserType('instructors_only');
+      // Load announcements
+      try {
+        final announcementsList =
+        await _apiService.getAnnouncementsForUserType('instructors_only');
+        _announcements = announcementsList.isNotEmpty ? announcementsList : [];
+      } catch (e) {
+        // If announcements fail to load, continue with empty list
+        print('Error loading announcements: $e');
+        _announcements = [];
+      }
 
       setState(() => _isLoading = false);
     } catch (e) {
