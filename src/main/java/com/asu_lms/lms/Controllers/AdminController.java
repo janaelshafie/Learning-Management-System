@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ArrayList;
+import java.sql.Date;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -199,9 +200,14 @@ public class AdminController {
             if ("instructor".equals(user.getRole())) {
                 Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(user.getUserId());
                 if (instructorOpt.isPresent()) {
-                    userData.put("instructorType", instructorOpt.get().getInstructorType());
+                    Instructor instructor = instructorOpt.get();
+                    userData.put("instructorType", instructor.getInstructorType());
+                    userData.put("departmentId", instructor.getDepartmentId());
+                    userData.put("officeHours", instructor.getOfficeHours());
                 } else {
-                    userData.put("instructorType", "unknown");
+                    userData.put("instructorType", "professor"); // Default to professor
+                    userData.put("departmentId", null);
+                    userData.put("officeHours", null);
                 }
             }
             
@@ -1040,6 +1046,89 @@ public class AdminController {
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Error replacing parent: " + e.getMessage());
+        }
+        
+        return response;
+    }
+    
+    // Update a semester
+    @PostMapping("/semesters/update")
+    public Map<String, Object> updateSemester(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Object semesterIdObj = request.get("semesterId");
+            String name = (String) request.get("name");
+            String startDateStr = (String) request.get("startDate");
+            String endDateStr = (String) request.get("endDate");
+            Object registrationOpenObj = request.get("registrationOpen");
+            
+            Integer semesterId = null;
+            if (semesterIdObj instanceof String) {
+                semesterId = Integer.parseInt((String) semesterIdObj);
+            } else if (semesterIdObj instanceof Integer) {
+                semesterId = (Integer) semesterIdObj;
+            }
+            
+            if (semesterId == null) {
+                response.put("status", "error");
+                response.put("message", "Semester ID is required");
+                return response;
+            }
+            
+            Optional<Semester> semesterOpt = semesterRepository.findById(semesterId);
+            if (semesterOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Semester not found");
+                return response;
+            }
+            
+            Semester semester = semesterOpt.get();
+            
+            if (name != null && !name.trim().isEmpty()) {
+                semester.setName(name.trim());
+            }
+            
+            if (startDateStr != null && !startDateStr.trim().isEmpty()) {
+                try {
+                    semester.setStartDate(Date.valueOf(startDateStr));
+                } catch (IllegalArgumentException e) {
+                    response.put("status", "error");
+                    response.put("message", "Invalid start date format. Expected: YYYY-MM-DD");
+                    return response;
+                }
+            }
+            
+            if (endDateStr != null && !endDateStr.trim().isEmpty()) {
+                try {
+                    semester.setEndDate(Date.valueOf(endDateStr));
+                } catch (IllegalArgumentException e) {
+                    response.put("status", "error");
+                    response.put("message", "Invalid end date format. Expected: YYYY-MM-DD");
+                    return response;
+                }
+            }
+            
+            if (registrationOpenObj != null) {
+                Boolean registrationOpen = null;
+                if (registrationOpenObj instanceof Boolean) {
+                    registrationOpen = (Boolean) registrationOpenObj;
+                } else if (registrationOpenObj instanceof String) {
+                    registrationOpen = Boolean.parseBoolean((String) registrationOpenObj);
+                }
+                if (registrationOpen != null) {
+                    semester.setRegistrationOpen(registrationOpen);
+                }
+            }
+            
+            semesterRepository.save(semester);
+            
+            response.put("status", "success");
+            response.put("message", "Semester updated successfully");
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error updating semester: " + e.getMessage());
         }
         
         return response;

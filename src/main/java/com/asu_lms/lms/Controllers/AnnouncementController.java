@@ -58,10 +58,31 @@ public class AnnouncementController {
             // Set announcement type
             if (announcementType != null && !announcementType.trim().isEmpty()) {
                 try {
-                    announcement.setAnnouncementType(Announcement.AnnouncementType.valueOf(announcementType.toLowerCase()));
+                    String typeLower = announcementType.toLowerCase().trim();
+                    // Map frontend values to backend enum values
+                    String enumValue;
+                    switch (typeLower) {
+                        case "all":
+                            enumValue = "all_users";
+                            break;
+                        case "student":
+                            enumValue = "students_only";
+                            break;
+                        case "instructor":
+                            enumValue = "instructors_only";
+                            break;
+                        case "admin":
+                            enumValue = "admins_only";
+                            break;
+                        default:
+                            // Try to use the value directly if it's already in enum format
+                            enumValue = typeLower;
+                            break;
+                    }
+                    announcement.setAnnouncementType(Announcement.AnnouncementType.valueOf(enumValue));
                 } catch (IllegalArgumentException e) {
                     response.put("status", "error");
-                    response.put("message", "Invalid announcement type");
+                    response.put("message", "Invalid announcement type: " + announcementType + ". Valid types are: all, student, instructor, admin");
                     return response;
                 }
             }
@@ -159,10 +180,31 @@ public class AnnouncementController {
 
             if (request.get("announcementType") != null && !request.get("announcementType").trim().isEmpty()) {
                 try {
-                    announcement.setAnnouncementType(Announcement.AnnouncementType.valueOf(request.get("announcementType").toLowerCase()));
+                    String typeLower = request.get("announcementType").toLowerCase().trim();
+                    // Map frontend values to backend enum values
+                    String enumValue;
+                    switch (typeLower) {
+                        case "all":
+                            enumValue = "all_users";
+                            break;
+                        case "student":
+                            enumValue = "students_only";
+                            break;
+                        case "instructor":
+                            enumValue = "instructors_only";
+                            break;
+                        case "admin":
+                            enumValue = "admins_only";
+                            break;
+                        default:
+                            // Try to use the value directly if it's already in enum format
+                            enumValue = typeLower;
+                            break;
+                    }
+                    announcement.setAnnouncementType(Announcement.AnnouncementType.valueOf(enumValue));
                 } catch (IllegalArgumentException e) {
                     response.put("status", "error");
-                    response.put("message", "Invalid announcement type");
+                    response.put("message", "Invalid announcement type: " + request.get("announcementType") + ". Valid types are: all, student, instructor, admin");
                     return response;
                 }
             }
