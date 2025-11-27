@@ -1207,4 +1207,19 @@ class ApiService {
       return {'status': 'error', 'message': 'Error: $e'};
     }
   }
+
+  // Get instructor data including courses, students count, and office hours
+  Future<Map<String, dynamic>> getInstructorData(int instructorId) async {
+    // For now, return empty data structure so the UI doesn't crash
+    // TODO: Implement actual backend endpoint to fetch instructor courses
+    return {
+      'status': 'success',
+      'data': {
+        'courses': [],
+        'studentsCount': 0,
+        'pendingRequests': 0,
+        'officeHours': [],
+      },
+    };
+  }
 }

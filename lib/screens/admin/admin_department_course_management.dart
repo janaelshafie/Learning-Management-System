@@ -317,6 +317,12 @@ class _AdminDepartmentCourseManagementState
   }
 
   Future<void> _showEditCourseDialog(Map<String, dynamic> course) async {
+    final courseCodeController = TextEditingController(
+      text: course['courseCode'] ?? '',
+    );
+    final titleController = TextEditingController(
+      text: course['title'] ?? '',
+    );
     final creditsController = TextEditingController(
       text: course['credits']?.toString() ?? '',
     );
@@ -324,51 +330,317 @@ class _AdminDepartmentCourseManagementState
       text: course['description'] ?? '',
     );
     String selectedCourseType = course['courseType'] ?? 'core';
+    List<dynamic> prerequisites = [];
+    bool isLoadingPrereqs = true;
+
+    // Load prerequisites
+    try {
+      final prereqResponse = await _apiService.getCoursePrerequisites(
+        course['courseId'],
+      );
+      if (prereqResponse['status'] == 'success') {
+        prerequisites = prereqResponse['prerequisites'] ?? [];
+      }
+      isLoadingPrereqs = false;
+    } catch (e) {
+      isLoadingPrereqs = false;
+    }
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text('Edit ${course['courseCode']}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: creditsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Credit Hours',
-                    border: OutlineInputBorder(),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: courseCodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Course Code *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.code),
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Course Name *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.title),
+                    ),
                   ),
-                  maxLines: 5,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Course Type',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: creditsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Credit Hours *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.credit_card),
+                    ),
+                    keyboardType: TextInputType.number,
                   ),
-                  value: selectedCourseType,
-                  items: const [
-                    DropdownMenuItem(value: 'core', child: Text('Core')),
-                    DropdownMenuItem(value: 'elective', child: Text('Elective')),
-                  ],
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedCourseType = value ?? 'core';
-                    });
-                  },
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.description),
+                    ),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Course Type',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.category),
+                    ),
+                    value: selectedCourseType,
+                    items: const [
+                      DropdownMenuItem(value: 'core', child: Text('Core')),
+                      DropdownMenuItem(value: 'elective', child: Text('Elective')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedCourseType = value ?? 'core';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Prerequisites',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          // Show dialog to add prerequisite
+                          int? selectedPrereqId;
+                          final availableCourses = _allCourses.where((c) {
+                            return c['courseId'] != course['courseId'] &&
+                                !prerequisites.any((p) =>
+                                    p['prereqCourseId'] == c['courseId']);
+                          }).toList();
+
+                          if (availableCourses.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No available courses to add as prerequisite'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          await showDialog(
+                            context: context,
+                            builder: (dialogContext) => StatefulBuilder(
+                              builder: (dialogContext, setDialogState2) => AlertDialog(
+                                title: const Text('Add Prerequisite'),
+                                content: DropdownButtonFormField<int?>(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Select Course',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: availableCourses.map((c) {
+                                    return DropdownMenuItem<int?>(
+                                      value: c['courseId'],
+                                      child: Text(
+                                        '${c['courseCode']} - ${c['title']}',
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setDialogState2(() {
+                                      selectedPrereqId = value;
+                                    });
+                                  },
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: selectedPrereqId == null
+                                        ? null
+                                        : () async {
+                                            try {
+                                              final result =
+                                                  await _apiService.addPrerequisite(
+                                                course['courseId'],
+                                                selectedPrereqId!,
+                                              );
+                                              if (result['status'] == 'success') {
+                                                Navigator.of(dialogContext).pop();
+                                                // Reload prerequisites
+                                                final prereqResponse =
+                                                    await _apiService
+                                                        .getCoursePrerequisites(
+                                                  course['courseId'],
+                                                );
+                                                if (prereqResponse['status'] ==
+                                                    'success') {
+                                                  setDialogState(() {
+                                                    prerequisites = prereqResponse[
+                                                            'prerequisites'] ??
+                                                        [];
+                                                  });
+                                                }
+                                              } else {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      result['message'] ??
+                                                          'Error adding prerequisite',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(content: Text('Error: $e')),
+                                              );
+                                            }
+                                          },
+                                    child: const Text('Add'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (isLoadingPrereqs)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (prerequisites.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'No prerequisites',
+                        style: TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    ...prerequisites.map((prereq) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${prereq['prereqCourse']?['courseCode'] ?? ''} - ${prereq['prereqCourse']?['title'] ?? 'Unknown'}',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (confirmContext) => AlertDialog(
+                                    title: const Text('Remove Prerequisite'),
+                                    content: const Text(
+                                      'Are you sure you want to remove this prerequisite?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(confirmContext).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.of(confirmContext).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Remove'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) {
+                                  try {
+                                    final result =
+                                        await _apiService.removePrerequisite(
+                                      course['courseId'],
+                                      prereq['prereqCourseId'],
+                                    );
+                                    if (result['status'] == 'success') {
+                                      // Reload prerequisites
+                                      final prereqResponse =
+                                          await _apiService.getCoursePrerequisites(
+                                        course['courseId'],
+                                      );
+                                      if (prereqResponse['status'] == 'success') {
+                                        setDialogState(() {
+                                          prerequisites = prereqResponse[
+                                                  'prerequisites'] ??
+                                              [];
+                                        });
+                                      }
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            result['message'] ??
+                                                'Error removing prerequisite',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -378,21 +650,25 @@ class _AdminDepartmentCourseManagementState
             ),
             ElevatedButton(
               onPressed: () async {
-                if (creditsController.text.isEmpty) {
+                if (courseCodeController.text.isEmpty ||
+                    titleController.text.isEmpty ||
+                    creditsController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter credit hours')),
+                    const SnackBar(
+                      content: Text('Please fill in all required fields'),
+                    ),
                   );
                   return;
                 }
 
                 try {
-                  // First update the course itself
+                  // Update the course itself
                   final courseUpdateResult = await _apiService.updateCourse({
                     'courseId': course['courseId'].toString(),
-                    'courseCode': course['courseCode'],
-                    'title': course['title'],
-                    'description': descriptionController.text,
-                    'credits': creditsController.text,
+                    'courseCode': courseCodeController.text.trim(),
+                    'title': titleController.text.trim(),
+                    'description': descriptionController.text.trim(),
+                    'credits': creditsController.text.trim(),
                   });
 
                   if (courseUpdateResult['status'] != 'success') {
@@ -406,9 +682,8 @@ class _AdminDepartmentCourseManagementState
                     return;
                   }
 
-                  // Then update the department course type if it changed
+                  // Update the department course type if it changed
                   if (selectedCourseType != course['courseType']) {
-                    // Unlink and relink with new type
                     await _apiService.unlinkCourseFromDepartment(
                       widget.department['departmentId'],
                       course['courseId'],
@@ -574,7 +849,7 @@ class _AdminDepartmentCourseManagementState
                           border: Border.all(color: Colors.orange[200]!),
                         ),
                         child: Text(
-                          '${prereq['courseCode'] ?? ''} - ${prereq['title'] ?? 'Unknown'}',
+                          '${prereq['prereqCourse']?['courseCode'] ?? ''} - ${prereq['prereqCourse']?['title'] ?? 'Unknown'}',
                           style: const TextStyle(fontSize: 13),
                         ),
                       );

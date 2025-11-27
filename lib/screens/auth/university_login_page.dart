@@ -5,8 +5,7 @@ import '../../services/api_services.dart'; // For ApiService
 import '../../common/app_state.dart'; // For global state variables
 import '../home/my_home_page.dart'; // For navigation to MyHomePage
 import '../student/student_dashboard_screen.dart'; // For student dashboard
-// TODO: Uncomment when instructor dashboard is implemented
-// import '../instructor/instructor_dashboard_screen.dart'; // For instructor dashboard
+import '../instructor/Instructor_screen.dart'; // For instructor dashboard
 import 'signup_screen.dart'; // For signup screen navigation
 import '../admin/admin_main_screen.dart'; // For admin dashboard
 
@@ -49,27 +48,14 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
           MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
       }
-      // TODO: Uncomment when instructor dashboard is implemented
-      // else if (result['role'] == 'instructor') {
-      //   isInstructor = true;
-      //   Navigator.pushReplacement(
-      //     context,
-      //     MaterialPageRoute(builder: (_) => const InstructorScreen()),
-      //   );
-      // }
       else if (result['role'] == 'instructor') {
-        // Instructor dashboard is not implemented yet
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Instructor dashboard is not implemented yet. Please contact the administrator.',
-            ),
-            duration: Duration(seconds: 4),
-            backgroundColor: Colors.orange,
+        isInstructor = true;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InstructorScreen(userEmail: email),
           ),
         );
-        // Don't navigate, stay on login page
-        return;
       } else if (result['role'] == 'student') {
         isStudent = true;
         Navigator.pushReplacement(

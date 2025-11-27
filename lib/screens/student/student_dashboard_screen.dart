@@ -521,6 +521,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             ),
           const SizedBox(height: 24),
 
+          // Announcements Section
+          if (_announcements.isNotEmpty) ...[
+            const Text(
+              'Announcements',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...(_announcements
+                .map((announcement) => _buildAnnouncementCard(announcement))
+                .toList()),
+            const SizedBox(height: 32),
+          ],
+
           // KPI Cards
           Row(
             children: [
@@ -546,23 +563,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             ],
           ),
           const SizedBox(height: 32),
-
-          // Announcements Section
-          if (_announcements.isNotEmpty) ...[
-            const Text(
-              'Announcements',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E3A8A),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...(_announcements
-                .map((announcement) => _buildAnnouncementCard(announcement))
-                .toList()),
-            const SizedBox(height: 32),
-          ],
 
           // Quick Access Cards
           const Text(

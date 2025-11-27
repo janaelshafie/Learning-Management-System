@@ -61,8 +61,15 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
         _selectedDepartmentId = widget.user!['departmentId'];
         _selectedAdvisorId = widget.user!['advisorId'];
       } else if (_selectedRole == 'instructor') {
-        _selectedInstructorType = widget.user!['instructorType'] ?? 'professor';
-        _selectedDepartmentId = widget.user!['departmentId'];
+        final instructorType = widget.user!['instructorType']?.toString().toLowerCase();
+        // Handle "unknown" or invalid values by defaulting to 'professor'
+        if (instructorType == 'professor' || instructorType == 'ta') {
+          _selectedInstructorType = instructorType;
+        } else {
+          _selectedInstructorType = 'professor'; // Default to professor if unknown/null
+        }
+        final deptId = widget.user!['departmentId'];
+        _selectedDepartmentId = (deptId != null && deptId is int) ? deptId : null;
         _officeHoursController.text = widget.user!['officeHours'] ?? '';
       }
     }
@@ -92,11 +99,38 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
       final deptResponse = await _apiService.getAllDepartments();
       if (deptResponse['status'] == 'success') {
         _departments = deptResponse['departments'] ?? [];
+        
+        // Validate departmentId exists in loaded departments for instructors
+        if (_selectedRole == 'instructor' && _selectedDepartmentId != null) {
+          final deptExists = _departments.any(
+            (dept) => dept['departmentId'] == _selectedDepartmentId,
+          );
+          if (!deptExists) {
+            // Reset to null if department doesn't exist
+            _selectedDepartmentId = null;
+          }
+        }
       }
 
       final instResponse = await _apiService.getAllInstructors();
       if (instResponse['status'] == 'success') {
         _instructors = instResponse['instructors'] ?? [];
+        
+        // If editing an instructor and departmentId not set, try to get it from instructors list
+        if (widget.user != null && _selectedRole == 'instructor' && _selectedDepartmentId == null) {
+          final instructorData = _instructors.firstWhere(
+            (inst) => inst['userId'] == widget.user!['userId'],
+            orElse: () => {},
+          );
+          if (instructorData.isNotEmpty && instructorData['departmentId'] != null) {
+            final deptExists = _departments.any(
+              (dept) => dept['departmentId'] == instructorData['departmentId'],
+            );
+            if (deptExists) {
+              _selectedDepartmentId = instructorData['departmentId'];
+            }
+          }
+        }
       }
     } catch (e) {
       // Ignore errors, continue with empty lists
@@ -240,16 +274,39 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
   }
 
   Widget _buildRoleSelector() {
+    final isEditMode = widget.user != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'ACCOUNT ROLE',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E3A8A),
-          ),
+        Row(
+          children: [
+            const Text(
+              'ACCOUNT ROLE',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+              ),
+            ),
+            if (isEditMode) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Not Editable',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.orange[800],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 12),
         Row(
@@ -297,8 +354,9 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
 
   Widget _buildRoleButton(String role, String label, IconData icon, Color color) {
     final isSelected = _selectedRole == role;
+    final isEditMode = widget.user != null;
     return InkWell(
-      onTap: () {
+      onTap: isEditMode ? null : () {
         setState(() {
           _selectedRole = role;
         });
@@ -313,23 +371,26 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
             width: 2,
           ),
         ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : color,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
+        child: Opacity(
+          opacity: isEditMode ? 0.6 : 1.0,
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : color,
+                size: 32,
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -445,7 +506,10 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Role Selector
-                          _buildRoleSelector(),
+                          AbsorbPointer(
+                            absorbing: isEditMode,
+                            child: _buildRoleSelector(),
+                          ),
                           const SizedBox(height: 32),
                           // Personal Information Section
                           _buildSectionHeader('Personal Information', Icons.person),
@@ -596,79 +660,101 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
                           // Role-Specific Sections
                           if (_selectedRole == 'student') ...[
                             _buildSectionHeader('Student Details', Icons.school),
-                            TextFormField(
-                              controller: _studentUidController,
-                              decoration: const InputDecoration(
-                                labelText: 'Student UID *',
-                                hintText: 'S-2023-XXXX',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.badge),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue[200]!),
                               ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter Student UID';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<int?>(
-                              decoration: const InputDecoration(
-                                labelText: 'Department',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.business),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextFormField(
+                                    controller: _studentUidController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Student UID *',
+                                      hintText: 'S-2023-XXXX',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.badge),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Please enter Student UID';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  DropdownButtonFormField<int?>(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Department',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.business),
+                                    ),
+                                    value: (_selectedDepartmentId != null && 
+                                            _departments.any((dept) => dept['departmentId'] == _selectedDepartmentId))
+                                        ? _selectedDepartmentId
+                                        : null,
+                                    items: [
+                                      const DropdownMenuItem<int?>(
+                                        value: null,
+                                        child: Text('Select Department'),
+                                      ),
+                                      ..._departments.map((dept) {
+                                        return DropdownMenuItem<int?>(
+                                          value: dept['departmentId'],
+                                          child: Text(dept['name'] ?? 'Unknown'),
+                                        );
+                                      }),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedDepartmentId = value;
+                                        // Reset advisor when department changes
+                                        _selectedAdvisorId = null;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  DropdownButtonFormField<int?>(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Advisor',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.person_outline),
+                                    ),
+                                    value: (_selectedAdvisorId != null &&
+                                            _instructors.any((inst) =>
+                                                inst['userId'] == _selectedAdvisorId &&
+                                                (_selectedDepartmentId == null ||
+                                                    inst['departmentId'] == _selectedDepartmentId)))
+                                        ? _selectedAdvisorId
+                                        : null,
+                                    items: [
+                                      const DropdownMenuItem<int?>(
+                                        value: null,
+                                        child: Text('Select Faculty Advisor'),
+                                      ),
+                                      ..._instructors
+                                          .where((inst) =>
+                                              _selectedDepartmentId == null ||
+                                              inst['departmentId'] ==
+                                                  _selectedDepartmentId)
+                                          .map((inst) {
+                                        return DropdownMenuItem<int?>(
+                                          value: inst['userId'],
+                                          child: Text(inst['name'] ?? 'Unknown'),
+                                        );
+                                      }),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedAdvisorId = value;
+                                      });
+                                    },
+                                  ),
+                                ],
                               ),
-                              value: _selectedDepartmentId,
-                              items: [
-                                const DropdownMenuItem<int?>(
-                                  value: null,
-                                  child: Text('Select Department'),
-                                ),
-                                ..._departments.map((dept) {
-                                  return DropdownMenuItem<int?>(
-                                    value: dept['departmentId'],
-                                    child: Text(dept['name'] ?? 'Unknown'),
-                                  );
-                                }),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedDepartmentId = value;
-                                  // Reset advisor when department changes
-                                  _selectedAdvisorId = null;
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<int?>(
-                              decoration: const InputDecoration(
-                                labelText: 'Advisor',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.person_outline),
-                              ),
-                              value: _selectedAdvisorId,
-                              items: [
-                                const DropdownMenuItem<int?>(
-                                  value: null,
-                                  child: Text('Select Faculty Advisor'),
-                                ),
-                                ..._instructors
-                                    .where((inst) =>
-                                        _selectedDepartmentId == null ||
-                                        inst['departmentId'] ==
-                                            _selectedDepartmentId)
-                                    .map((inst) {
-                                  return DropdownMenuItem<int?>(
-                                    value: inst['userId'],
-                                    child: Text(inst['name'] ?? 'Unknown'),
-                                  );
-                                }),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedAdvisorId = value;
-                                });
-                              },
                             ),
                           ] else if (_selectedRole == 'instructor') ...[
                             _buildSectionHeader('Instructor Details', Icons.menu_book),
@@ -687,7 +773,9 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
                                       labelText: 'Instructor Type *',
                                       border: OutlineInputBorder(),
                                     ),
-                                    value: _selectedInstructorType ?? 'professor',
+                                    value: (_selectedInstructorType == 'professor' || _selectedInstructorType == 'ta')
+                                        ? _selectedInstructorType
+                                        : 'professor',
                                     items: const [
                                       DropdownMenuItem(
                                         value: 'professor',
@@ -716,7 +804,10 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
                                       labelText: 'Department',
                                       border: OutlineInputBorder(),
                                     ),
-                                    value: _selectedDepartmentId,
+                                    value: (_selectedDepartmentId != null && 
+                                            _departments.any((dept) => dept['departmentId'] == _selectedDepartmentId))
+                                        ? _selectedDepartmentId
+                                        : null,
                                     items: [
                                       const DropdownMenuItem<int?>(
                                         value: null,
@@ -750,27 +841,40 @@ class _AdminUserFormScreenState extends State<AdminUserFormScreen> {
                             ),
                           ] else if (_selectedRole == 'parent') ...[
                             _buildSectionHeader('Parent Details', Icons.family_restroom),
-                            TextFormField(
-                              controller: _studentNationalIdController,
-                              decoration: const InputDecoration(
-                                labelText: 'Student National ID *',
-                                hintText: 'Enter the National ID of the student',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.person_search),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green[200]!),
                               ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter Student National ID';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Enter the National ID of the student you are the parent of.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextFormField(
+                                    controller: _studentNationalIdController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Student National ID *',
+                                      hintText: 'Enter the National ID of the student',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.person_search),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Please enter Student National ID';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Enter the National ID of the student you are the parent of.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

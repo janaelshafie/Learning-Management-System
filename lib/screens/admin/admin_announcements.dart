@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
+import '../../common/app_state.dart';
 
 class AdminAnnouncements extends StatefulWidget {
   const AdminAnnouncements({super.key});
@@ -44,6 +45,7 @@ class _AdminAnnouncementsState extends State<AdminAnnouncements> {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
     String selectedType = 'all';
+    String selectedPriority = 'medium';
 
     showDialog(
       context: context,
@@ -98,6 +100,37 @@ class _AdminAnnouncementsState extends State<AdminAnnouncements> {
                     });
                   },
                 ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Priority',
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedPriority,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'low',
+                      child: Text('Low'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'medium',
+                      child: Text('Medium'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'high',
+                      child: Text('High'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'urgent',
+                      child: Text('Urgent'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedPriority = value ?? 'medium';
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -123,6 +156,8 @@ class _AdminAnnouncementsState extends State<AdminAnnouncements> {
                     'title': titleController.text,
                     'content': contentController.text,
                     'announcementType': selectedType,
+                    'priority': selectedPriority,
+                    'createdBy': currentUserId.toString(),
                   });
 
                   if (result['status'] == 'success') {

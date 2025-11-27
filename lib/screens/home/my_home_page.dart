@@ -5,8 +5,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../../common/pdf_view_page.dart';     // For PdfViewPage
 import '../../common/app_state.dart';       // For global state variables
 import '../student/student_dashboard_screen.dart'; // For StudentDashboardScreen
-// TODO: Uncomment when instructor dashboard is implemented
-// import '../instructor/instructor_dashboard_screen.dart'; // For InstructorScreen
 import '../auth/university_login_page.dart';  // For UniversityLoginPage
 
 // Note: The PdfViewPage class is no longer here.
