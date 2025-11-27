@@ -11,4 +11,5 @@ import java.util.List;
 public interface StudentRepository extends JpaRepository<Student, Integer> {
     Optional<Student> findByStudentId(Integer studentId);
     List<Student> findByParentUserId(Integer parentUserId);
+    List<Student> findByAdvisorId(Integer advisorId);
 }

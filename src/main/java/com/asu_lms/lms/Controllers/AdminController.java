@@ -680,14 +680,21 @@ public class AdminController {
             
             Student student = studentOpt.get();
             
-            // Get all approved enrollments for this student
-            List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndStatus(userId, "approved");
+            // Get all enrollments for this student (approved, pending, and drop_pending)
+            // We need to include drop_pending so students can see courses they're trying to drop
+            List<Enrollment> allEnrollments = enrollmentRepository.findByStudentId(userId);
+            List<Enrollment> enrollments = allEnrollments.stream()
+                    .filter(e -> "approved".equals(e.getStatus()) || 
+                                 "pending".equals(e.getStatus()) || 
+                                 "drop_pending".equals(e.getStatus()))
+                    .collect(java.util.stream.Collectors.toList());
             
             List<Map<String, Object>> courses = new ArrayList<>();
             double totalPoints = 0.0;
             int totalCredits = 0;
             
             for (Enrollment enrollment : enrollments) {
+                String enrollmentStatus = enrollment.getStatus();
                 // Get section details
                 Optional<Section> sectionOpt = sectionRepository.findBySectionId(enrollment.getSectionId());
                 if (!sectionOpt.isPresent()) continue;
@@ -709,8 +716,15 @@ public class AdminController {
                 // Get semester details
                 Optional<Semester> semesterOpt = semesterRepository.findById(offeredCourse.getSemesterId());
                 String semesterName = "Unknown Semester";
+                String semesterStartDate = null;
+                String semesterEndDate = null;
+                Integer semesterId = offeredCourse.getSemesterId();
+                
                 if (semesterOpt.isPresent()) {
-                    semesterName = semesterOpt.get().getName();
+                    Semester semester = semesterOpt.get();
+                    semesterName = semester.getName();
+                    semesterStartDate = semester.getStartDate() != null ? semester.getStartDate().toString() : null;
+                    semesterEndDate = semester.getEndDate() != null ? semester.getEndDate().toString() : null;
                 }
                 
                 // Get grade for this enrollment
@@ -721,7 +735,12 @@ public class AdminController {
                 courseData.put("name", course.getTitle());
                 courseData.put("credits", course.getCredits());
                 courseData.put("semester", semesterName);
+                courseData.put("semesterId", semesterId);
+                courseData.put("semesterStartDate", semesterStartDate);
+                courseData.put("semesterEndDate", semesterEndDate);
                 courseData.put("section", section.getSectionNumber());
+                courseData.put("enrollmentStatus", enrollmentStatus); // Include enrollment status
+                courseData.put("enrollmentId", enrollment.getEnrollmentId()); // Include enrollment ID
                 
                 if (gradeOpt.isPresent()) {
                     Grade grade = gradeOpt.get();
@@ -739,8 +758,8 @@ public class AdminController {
                     marks.put("final_letter_grade", letterGrade);
                     courseData.put("marks", marks);
                     
-                    // Calculate GPA points
-                    if (letterGrade != null && !letterGrade.equals("N/A")) {
+                    // Calculate GPA points - only count approved enrollments with grades
+                    if ("approved".equals(enrollmentStatus) && letterGrade != null && !letterGrade.equals("N/A")) {
                         double gradePoints = getGradePoints(letterGrade);
                         totalPoints += course.getCredits() * gradePoints;
                         totalCredits += course.getCredits();
@@ -776,6 +795,24 @@ public class AdminController {
             } else {
                 studentData.put("departmentId", null);
                 studentData.put("departmentName", "No Department");
+            }
+
+            // Add advisor information
+            if (student.getAdvisorId() != null) {
+                Integer advisorId = student.getAdvisorId();
+                studentData.put("advisorId", advisorId);
+
+                instructorRepository.findByInstructorId(advisorId).ifPresent(instructor -> {
+                    userRepository.findById(instructor.getInstructorId()).ifPresent(user -> {
+                        studentData.put("advisorName", user.getName());
+                        studentData.put("advisorEmail", user.getOfficialMail() != null && !user.getOfficialMail().isEmpty() 
+                            ? user.getOfficialMail() : user.getEmail());
+                    });
+                });
+            } else {
+                studentData.put("advisorId", null);
+                studentData.put("advisorName", "N/A");
+                studentData.put("advisorEmail", "N/A");
             }
             
             response.put("status", "success");

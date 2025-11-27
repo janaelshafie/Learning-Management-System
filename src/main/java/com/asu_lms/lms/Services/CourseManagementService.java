@@ -29,10 +29,10 @@ public class CourseManagementService {
     private DepartmentRepository departmentRepository;
     
     @Autowired
-    private StudentRepository studentRepository;
-    
-    @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SectionRepository sectionRepository;
     
     /**
      * Get all departments
@@ -87,7 +87,6 @@ public class CourseManagementService {
             return new ArrayList<>();
         }
         
-        Department department = deptOpt.get();
         List<Map<String, Object>> result = new ArrayList<>();
         
         // Get all instructors and filter by department
@@ -201,6 +200,9 @@ public class CourseManagementService {
             OfferedCourse offeredCourse = new OfferedCourse(courseId, semesterId);
             OfferedCourse saved = offeredCourseRepository.save(offeredCourse);
             
+            // Ensure there is at least one default section for registration
+            createDefaultSectionIfMissing(saved);
+            
             response.put("status", "success");
             response.put("message", "Course offered successfully");
             response.put("offeredCourseId", saved.getOfferedCourseId());
@@ -211,6 +213,20 @@ public class CourseManagementService {
         }
         
         return response;
+    }
+
+    private void createDefaultSectionIfMissing(OfferedCourse offeredCourse) {
+        List<Section> existingSections = sectionRepository.findByOfferedCourseId(offeredCourse.getOfferedCourseId());
+        if (!existingSections.isEmpty()) {
+            return;
+        }
+
+        Section defaultSection = new Section();
+        defaultSection.setOfferedCourseId(offeredCourse.getOfferedCourseId());
+        defaultSection.setSectionNumber("A");
+        defaultSection.setCapacity(40);
+        defaultSection.setCurrentEnrollment(0);
+        sectionRepository.save(defaultSection);
     }
     
     /**
@@ -241,8 +257,6 @@ public class CourseManagementService {
                 response.put("message", "Course not found");
                 return response;
             }
-            
-            Course course = courseOpt.get();
             
             // Validate course belongs to the department
             boolean belongsToDepartment = departmentCourseRepository
