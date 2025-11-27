@@ -927,6 +927,76 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getStudentRegistrationData(
+      int studentId) async {
+    final url =
+        Uri.parse('http://localhost:8080/api/student/$studentId/registration');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> registerStudentForSection(
+    int studentId,
+    int sectionId,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/student/register');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'studentId': studentId, 'sectionId': sectionId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> dropStudentEnrollment(
+    int studentId,
+    int enrollmentId,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/student/drop');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'studentId': studentId,
+          'enrollmentId': enrollmentId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
   // Create a new user
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> userData) async {
     final url = Uri.parse('http://localhost:8080/api/admin/create-user');
@@ -1210,16 +1280,116 @@ class ApiService {
 
   // Get instructor data including courses, students count, and office hours
   Future<Map<String, dynamic>> getInstructorData(int instructorId) async {
-    // For now, return empty data structure so the UI doesn't crash
-    // TODO: Implement actual backend endpoint to fetch instructor courses
-    return {
-      'status': 'success',
-      'data': {
-        'courses': [],
-        'studentsCount': 0,
-        'pendingRequests': 0,
-        'officeHours': [],
-      },
-    };
+    final url =
+        Uri.parse('http://localhost:8080/api/instructors/$instructorId/dashboard');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getInstructorCourseDetail(
+    int instructorId,
+    int offeredCourseId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/instructors/$instructorId/courses/$offeredCourseId',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateStudentGrade(
+    int enrollmentId,
+    Map<String, dynamic> gradeData,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/instructors/grades/$enrollmentId');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(gradeData),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Get pending registration/drop requests for advisor
+  Future<Map<String, dynamic>> getPendingRequests(int instructorId) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/instructors/$instructorId/pending-requests',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // Approve or reject a registration/drop request
+  Future<Map<String, dynamic>> approveRequest(
+    int instructorId,
+    int enrollmentId,
+    String action, // "approve" or "reject"
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/instructors/approve-request');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'instructorId': instructorId,
+          'enrollmentId': enrollmentId,
+          'action': action,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
   }
 }
