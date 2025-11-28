@@ -1088,6 +1088,105 @@ public class AdminController {
         return response;
     }
     
+    // Get all semesters
+    @GetMapping("/semesters/all")
+    public Map<String, Object> getAllSemesters() {
+        List<Semester> semesters = semesterRepository.findAll();
+        
+        List<Map<String, Object>> enhancedSemesters = new ArrayList<>();
+        for (Semester semester : semesters) {
+            Map<String, Object> semesterData = new HashMap<>();
+            semesterData.put("semesterId", semester.getSemesterId());
+            semesterData.put("name", semester.getName());
+            semesterData.put("startDate", semester.getStartDate() != null ? semester.getStartDate().toString() : null);
+            semesterData.put("endDate", semester.getEndDate() != null ? semester.getEndDate().toString() : null);
+            semesterData.put("registrationOpen", semester.getRegistrationOpen());
+            enhancedSemesters.add(semesterData);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("semesters", enhancedSemesters);
+        response.put("count", enhancedSemesters.size());
+        
+        return response;
+    }
+    
+    // Create a new semester
+    @PostMapping("/semesters/create")
+    public Map<String, Object> createSemester(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            String name = (String) request.get("name");
+            String startDateStr = (String) request.get("startDate");
+            String endDateStr = (String) request.get("endDate");
+            Object registrationOpenObj = request.get("registrationOpen");
+            
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Semester name is required");
+                return response;
+            }
+            
+            if (startDateStr == null || startDateStr.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Start date is required");
+                return response;
+            }
+            
+            if (endDateStr == null || endDateStr.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "End date is required");
+                return response;
+            }
+            
+            // Parse dates
+            Date startDate;
+            Date endDate;
+            try {
+                startDate = Date.valueOf(startDateStr.trim());
+                endDate = Date.valueOf(endDateStr.trim());
+            } catch (IllegalArgumentException e) {
+                response.put("status", "error");
+                response.put("message", "Invalid date format. Expected: YYYY-MM-DD");
+                return response;
+            }
+            
+            // Validate that start date is before end date
+            if (startDate.after(endDate)) {
+                response.put("status", "error");
+                response.put("message", "Start date must be before end date");
+                return response;
+            }
+            
+            // Parse registration open flag
+            Boolean registrationOpen = false;
+            if (registrationOpenObj != null) {
+                if (registrationOpenObj instanceof Boolean) {
+                    registrationOpen = (Boolean) registrationOpenObj;
+                } else if (registrationOpenObj instanceof String) {
+                    registrationOpen = Boolean.parseBoolean((String) registrationOpenObj);
+                }
+            }
+            
+            // Create and save the semester
+            Semester semester = new Semester(name.trim(), startDate, endDate, registrationOpen);
+            semesterRepository.save(semester);
+            
+            response.put("status", "success");
+            response.put("message", "Semester created successfully");
+            response.put("semesterId", semester.getSemesterId());
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error creating semester: " + e.getMessage());
+        }
+        
+        return response;
+    }
+    
     // Update a semester
     @PostMapping("/semesters/update")
     public Map<String, Object> updateSemester(@RequestBody Map<String, Object> request) {
@@ -1166,6 +1265,58 @@ public class AdminController {
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Error updating semester: " + e.getMessage());
+        }
+        
+        return response;
+    }
+    
+    // Delete a semester
+    @PostMapping("/semesters/delete")
+    public Map<String, Object> deleteSemester(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Object semesterIdObj = request.get("semesterId");
+            
+            Integer semesterId = null;
+            if (semesterIdObj instanceof String) {
+                semesterId = Integer.parseInt((String) semesterIdObj);
+            } else if (semesterIdObj instanceof Integer) {
+                semesterId = (Integer) semesterIdObj;
+            }
+            
+            if (semesterId == null) {
+                response.put("status", "error");
+                response.put("message", "Semester ID is required");
+                return response;
+            }
+            
+            Optional<Semester> semesterOpt = semesterRepository.findById(semesterId);
+            if (semesterOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Semester not found");
+                return response;
+            }
+            
+            Semester semester = semesterOpt.get();
+            String semesterName = semester.getName();
+            
+            // Check if semester has any offered courses
+            List<OfferedCourse> offeredCourses = offeredCourseRepository.findBySemesterId(semesterId);
+            if (!offeredCourses.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Cannot delete semester '" + semesterName + "' because it has " + offeredCourses.size() + " offered course(s). Please delete offered courses first.");
+                return response;
+            }
+            
+            semesterRepository.delete(semester);
+            
+            response.put("status", "success");
+            response.put("message", "Semester '" + semesterName + "' deleted successfully");
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error deleting semester: " + e.getMessage());
         }
         
         return response;
