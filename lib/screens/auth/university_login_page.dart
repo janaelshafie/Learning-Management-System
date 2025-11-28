@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 // Imports for the new structure
 import '../../services/api_services.dart'; // For ApiService
@@ -47,14 +48,11 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
           context,
           MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
-      }
-      else if (result['role'] == 'instructor') {
+      } else if (result['role'] == 'instructor') {
         isInstructor = true;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => InstructorScreen(userEmail: email),
-          ),
+          MaterialPageRoute(builder: (_) => InstructorScreen(userEmail: email)),
         );
       } else if (result['role'] == 'student') {
         isStudent = true;
@@ -107,184 +105,398 @@ class _UniversityLoginPageState extends State<UniversityLoginPage> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF7F43FF), Color(0xFFD12D69)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            double topSpacing = constraints.maxHeight * 0.08;
-            double logoSize = constraints.maxWidth * 0.18;
-            double inputWidth = constraints.maxWidth > 450
-                ? 400
-                : constraints.maxWidth * 0.85;
+    final isDesktop = screenSize.width > 1200;
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(top: topSpacing),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Center(
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: logoSize / 2,
-                      child: Image.asset(
-                        'assets/Asu.jpg', // Use your logo path
-                        fit: BoxFit.contain,
-                        height: logoSize * 0.8,
+    return Scaffold(
+      body: isDesktop
+          ? Row(
+              children: [
+                // Left side - White background with smaller login form
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(80),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: 480),
+                          child: _buildLoginCard(context),
+                        ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    "University App",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                ),
+                // Right side - Background image with text and blur effect
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/ASU_home.png'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 30),
-                  // Use Form widget
-                  Form(
-                    key: _formKey,
-                    child: Column(
+                    child: Stack(
                       children: [
-                        SizedBox(
-                          width: inputWidth,
-                          child: TextFormField(
-                            controller: _idController,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintText: "Email...",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 14,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your Email';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 15),
-                        SizedBox(
-                          width: inputWidth,
-                          child: TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintText: "Password...",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  color: Colors.grey,
+                        // Dark overlay on top of image for contrast
+                        Container(color: Colors.black.withOpacity(0.5)),
+                        // Learning Management System text - more prominent
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Learning',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 64,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: Offset(3, 3),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
                               ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 14,
+                              SizedBox(height: 8),
+                              Text(
+                                'Management',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 64,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: Offset(3, 3),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        SizedBox(
-                          width: inputWidth,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue[700],
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(26),
+                              SizedBox(height: 8),
+                              Text(
+                                'System',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 64,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: Offset(3, 3),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            onPressed: () {
-                              if (_formKey.currentState?.validate() == true) {
-                                // If valid, proceed to login
-                                _handleLogin();
-                              }
-                            },
-                            child: Text(
-                              "Login",
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
+                              SizedBox(height: 24),
+                              Container(
+                                height: 4,
+                                width: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 22),
-                  TextButton(
-                    onPressed: () {
-                      // Handle forgot password
-                    },
-                    child: Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                ),
+              ],
+            )
+          : Container(
+              color: Colors.white,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 400),
+                    child: _buildLoginCard(context),
                   ),
-                  SizedBox(height: screenSize.height * 0.1),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SignupScreen()),
-                      );
-                    },
-                    child: Text(
-                      "Don't have an account? Sign Up",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            );
-          },
+            ),
+    );
+  }
+
+  Widget _buildLoginCard(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ASU Logo - larger, no blue box
+        Image.asset(
+          'assets/Asu.jpg',
+          height: 100,
+          width: 100,
+          fit: BoxFit.contain,
         ),
-      ),
+        SizedBox(height: 12),
+
+        // ASU ENG text
+        Text(
+          'ASU ENG',
+          style: TextStyle(
+            color: Color(0xFF1B3A7D),
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: 32),
+
+        // Login heading
+        Text(
+          'Log In',
+          style: TextStyle(
+            color: Color(0xFF1B3A7D),
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Welcome back',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        SizedBox(height: 28),
+
+        // Login form
+        Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Email field
+              Text(
+                'Email ID',
+                style: TextStyle(
+                  color: Color(0xFF1B3A7D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _idController,
+                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(color: Colors.black, fontSize: 15),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFFF5F7FA),
+                  hintText: 'Enter your email',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: Colors.grey[300]!,
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Color(0xFF1B3A7D), width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    color: Colors.grey[500],
+                    size: 22,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+
+              // Password field
+              Text(
+                'Password',
+                style: TextStyle(
+                  color: Color(0xFF1B3A7D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                style: TextStyle(color: Colors.black, fontSize: 15),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFFF5F7FA),
+                  hintText: 'Enter your password',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: Colors.grey[300]!,
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Color(0xFF1B3A7D), width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline,
+                    color: Colors.grey[500],
+                    size: 22,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: Colors.grey[500],
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 12),
+
+              // Forgot password link
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    // Handle forgot password
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                  ),
+                  child: Text(
+                    'Forgot password?',
+                    style: TextStyle(
+                      color: Color(0xFF1B3A7D),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // Login button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF1B3A7D),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 2,
+                    shadowColor: Color(0xFF1B3A7D).withOpacity(0.3),
+                  ),
+                  onPressed: () {
+                    if (_formKey.currentState?.validate() == true) {
+                      _handleLogin();
+                    }
+                  },
+                  child: Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 18),
+
+              // Signup link
+              Center(
+                child: RichText(
+                  text: TextSpan(
+                    text: "Don't have an account? ",
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                    children: [
+                      TextSpan(
+                        text: 'Sign up',
+                        style: TextStyle(
+                          color: Color(0xFF1B3A7D),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SignupScreen(),
+                              ),
+                            );
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
