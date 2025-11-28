@@ -166,17 +166,127 @@ public class InstructorController {
         return courses;
     }
 
+    private static final String OFFICE_HOUR_FIELD_DELIMITER = "~";
+    private static final String OFFICE_HOUR_SLOT_JOIN = " | ";
+
     private List<Map<String, Object>> buildOfficeHours(String officeHours) {
-        if (officeHours == null || officeHours.trim().isEmpty()) {
+        // Office hours are stored as a single string column on Instructor.officeHours.
+        // Each slot is serialized as day~from~to~location and separated by "|".
+        if (officeHours == null) {
             return Collections.emptyList();
         }
 
-        Map<String, Object> slot = new HashMap<>();
-        slot.put("day", officeHours);
-        slot.put("from", "");
-        slot.put("to", "");
-        slot.put("location", "Office");
-        return Collections.singletonList(slot);
+        String normalized = officeHours.trim();
+        if (normalized.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String[] rawSlots = normalized.split("\\|");
+        List<Map<String, Object>> slots = new ArrayList<>();
+
+        for (String raw : rawSlots) {
+            String text = raw.trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+
+            String[] parts = text.split(OFFICE_HOUR_FIELD_DELIMITER, -1);
+            Map<String, Object> slot = new HashMap<>();
+            if (parts.length >= 3) {
+                slot.put("day", parts[0]);
+                slot.put("from", parts[1]);
+                slot.put("to", parts[2]);
+                slot.put("location", parts.length >= 4 ? parts[3] : "");
+            } else {
+                // Backwards compatibility for legacy data where the whole string was stored.
+                slot.put("day", text);
+                slot.put("from", "");
+                slot.put("to", "");
+                slot.put("location", "");
+            }
+            slots.add(slot);
+        }
+
+        return slots;
+    }
+
+    @PutMapping("/{instructorId}/office-hours")
+    public Map<String, Object> updateOfficeHours(
+            @PathVariable Integer instructorId,
+            @RequestBody Map<String, Object> request
+    ) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(instructorId);
+            if (instructorOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Instructor not found");
+                return response;
+            }
+
+            Instructor instructor = instructorOpt.get();
+
+            // The frontend sends structured slots (day, from, to, location) which we serialize
+            // back into a single string to preserve the existing column structure.
+            Object slotsObj = request.get("slots");
+            String combined = serializeOfficeHours(slotsObj);
+
+            instructor.setOfficeHours(combined);
+            instructorRepository.save(instructor);
+
+            response.put("status", "success");
+            response.put("message", "Office hours updated successfully");
+            response.put("officeHours", buildOfficeHours(combined));
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error updating office hours: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    private String serializeOfficeHours(Object slotsObj) {
+        if (!(slotsObj instanceof List<?> slotsList)) {
+            return "";
+        }
+
+        List<String> serialized = new ArrayList<>();
+
+        for (Object entry : slotsList) {
+            if (!(entry instanceof Map<?, ?> mapEntry)) {
+                continue;
+            }
+
+            String day = Optional.ofNullable(mapEntry.get("day"))
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .orElse("");
+            String from = Optional.ofNullable(mapEntry.get("from"))
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .orElse("");
+            String to = Optional.ofNullable(mapEntry.get("to"))
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .orElse("");
+            String location = Optional.ofNullable(mapEntry.get("location"))
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .orElse("");
+
+            if (day.isEmpty() || from.isEmpty() || to.isEmpty()) {
+                continue;
+            }
+
+            serialized.add(String.join(OFFICE_HOUR_FIELD_DELIMITER, day, from, to, location));
+        }
+
+        if (serialized.isEmpty()) {
+            return "";
+        }
+
+        return serialized.stream().collect(Collectors.joining(OFFICE_HOUR_SLOT_JOIN));
     }
 
     private List<Map<String, Object>> buildAdviseeList(Instructor instructor) {
