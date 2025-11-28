@@ -34,16 +34,35 @@ class _InstructorScreenState extends State<InstructorScreen>
   List<Map<String, dynamic>> _pendingDrops = [];
   bool _isLoadingRequests = false;
 
+  final List<String> _daysOfWeek = const [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  String? _selectedOfficeDay;
+  final TextEditingController _startTimeController = TextEditingController();
+  final TextEditingController _endTimeController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  bool _isSavingOfficeHours = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _selectedOfficeDay = _daysOfWeek.first;
     _loadInstructorData();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -92,8 +111,16 @@ class _InstructorScreenState extends State<InstructorScreen>
                 List<Map<String, dynamic>>.from(data['courses'] ?? []);
             _studentsCount = data['studentsCount'] ?? 0;
             _pendingRequests = data['pendingRequests'] ?? 0;
-            _officeHours =
-                List<Map<String, dynamic>>.from(data['officeHours'] ?? []);
+              final fetchedOfficeHours =
+                  List<Map<String, dynamic>>.from(data['officeHours'] ?? []);
+              _officeHours = fetchedOfficeHours
+                  .map((slot) => {
+                        'day': slot['day']?.toString() ?? '',
+                        'from': slot['from']?.toString() ?? '',
+                        'to': slot['to']?.toString() ?? '',
+                        'location': slot['location']?.toString() ?? '',
+                      })
+                  .toList();
             _adviseeStudents =
                 List<Map<String, dynamic>>.from(data['advisees'] ?? []);
           });
@@ -1281,38 +1308,254 @@ class _InstructorScreenState extends State<InstructorScreen>
             ),
           ),
           const SizedBox(height: 16),
-          if (_officeHours.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'No office hours scheduled yet',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ),
-            )
-          else
-            ..._officeHours.map(
-                  (slot) => Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: const Icon(Icons.schedule),
-                  title: Text(
-                    slot['day']?.toString() ?? 'Day',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Add Office Hour Slot',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E3A8A),
+                    ),
                   ),
-                  subtitle: Text(
-                    '${slot['from'] ?? ''} - ${slot['to'] ?? ''}',
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Day',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: _selectedOfficeDay,
+                          items: _daysOfWeek
+                              .map(
+                                (day) => DropdownMenuItem(
+                                  value: day,
+                                  child: Text(day),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedOfficeDay = value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _startTimeController,
+                          decoration: const InputDecoration(
+                            labelText: 'From (e.g. 10:00 AM)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _endTimeController,
+                          decoration: const InputDecoration(
+                            labelText: 'To (e.g. 12:00 PM)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  trailing: Text(
-                    slot['location']?.toString() ?? '',
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _locationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Location (optional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: _addOfficeHourSlot,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Slot'),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+          const SizedBox(height: 24),
+          if (_officeHours.isEmpty)
+            Text(
+              'No office hours saved yet.',
+              style: TextStyle(color: Colors.grey[600]),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Current Office Hours',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ..._officeHours.asMap().entries.map(
+                  (entry) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: const Icon(Icons.schedule),
+                      title: Text(
+                        entry.value['day']?.toString() ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${entry.value['from'] ?? ''} - ${entry.value['to'] ?? ''}'
+                        '${entry.value['location'] != null && entry.value['location'].toString().isNotEmpty ? ' • ${entry.value['location']}' : ''}',
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _removeOfficeHourSlot(entry.key),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 24),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: _isSavingOfficeHours ? null : _saveOfficeHours,
+              icon: _isSavingOfficeHours
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(_isSavingOfficeHours ? 'Saving...' : 'Save Changes'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  void _addOfficeHourSlot() {
+    if (_selectedOfficeDay == null ||
+        _startTimeController.text.trim().isEmpty ||
+        _endTimeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a day and provide start/end times.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _officeHours = List<Map<String, dynamic>>.from(_officeHours)
+        ..add({
+          'day': _selectedOfficeDay!,
+          'from': _startTimeController.text.trim(),
+          'to': _endTimeController.text.trim(),
+          'location': _locationController.text.trim(),
+        });
+      _startTimeController.clear();
+      _endTimeController.clear();
+      _locationController.clear();
+    });
+  }
+
+  void _removeOfficeHourSlot(int index) {
+    setState(() {
+      _officeHours = List<Map<String, dynamic>>.from(_officeHours)
+        ..removeAt(index);
+    });
+  }
+
+  Future<void> _saveOfficeHours() async {
+    if (_userData == null || _userData!['userId'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User data missing. Please log in again.')),
+      );
+      return;
+    }
+
+    final slotsPayload = _officeHours
+        .map((slot) => {
+              'day': slot['day'] ?? '',
+              'from': slot['from'] ?? '',
+              'to': slot['to'] ?? '',
+              'location': slot['location'] ?? '',
+            })
+        .toList();
+
+    setState(() {
+      _isSavingOfficeHours = true;
+    });
+
+    try {
+      final instructorId = _userData!['userId'] as int;
+      final result = await _apiService.updateInstructorOfficeHours(
+        instructorId,
+        slotsPayload,
+      );
+
+      if (result['status'] == 'success') {
+        final updated =
+            List<Map<String, dynamic>>.from(result['officeHours'] ?? [])
+                .map((slot) => {
+                      'day': slot['day']?.toString() ?? '',
+                      'from': slot['from']?.toString() ?? '',
+                      'to': slot['to']?.toString() ?? '',
+                      'location': slot['location']?.toString() ?? '',
+                    })
+                .toList();
+        setState(() {
+          _officeHours = updated;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Office hours updated successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update office hours: ${result['message'] ?? 'Unknown error'}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating office hours: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingOfficeHours = false;
+        });
+      }
+    }
   }
 
   // ---------- SERVICES ----------
@@ -1508,4 +1751,5 @@ class _InstructorScreenState extends State<InstructorScreen>
     }
   }
 }
+
 

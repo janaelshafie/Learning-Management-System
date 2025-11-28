@@ -1392,4 +1392,35 @@ class ApiService {
       return {'status': 'error', 'message': 'Error: $e'};
     }
   }
+
+  // Update instructor office hours (stored as a single string column)
+  Future<Map<String, dynamic>> updateInstructorOfficeHours(
+    int instructorId,
+    List<Map<String, dynamic>> slots,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/instructors/$instructorId/office-hours',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'slots': slots,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
 }
