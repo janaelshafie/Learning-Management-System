@@ -68,12 +68,21 @@ INSERT INTO `User` (user_id, national_id, name, email, official_mail, password_h
 (209, '3000000209', 'CES Senior Student', 'ces.sen@mail.com', 'ces.sen@uni.edu', '$2a$10$4vDPjIFF.AQuOCbqQYJkFeAyy9AsHw5QRQEPpgVbnLAjQNuruIEUm', 'student'),
 (210, '3000000210', 'CES Junior Student', 'ces.jun@mail.com', 'ces.jun@uni.edu', '$2a$10$4vDPjIFF.AQuOCbqQYJkFeAyy9AsHw5QRQEPpgVbnLAjQNuruIEUm', 'student');
 
-INSERT INTO Student (student_id, student_uid, cumulative_gpa, department_id, advisor_id) VALUES
-(201, 'S-201', 3.2, 1, 101), (202, 'S-202', 2.8, 1, 101),
-(203, 'S-203', 3.5, 2, 102), (204, 'S-204', 3.0, 2, 102),
-(205, 'S-205', 2.9, 3, 103), (206, 'S-206', 3.1, 3, 103),
-(207, 'S-207', 3.8, 4, 104), (208, 'S-208', 3.4, 4, 104),
-(209, 'S-209', 2.5, 5, 105), (210, 'S-210', 2.7, 5, 105);
+-- Updated to match new parent/contact fields with CHECK (phone or email)
+INSERT INTO Student (
+    student_id, student_uid, cumulative_gpa, department_id, advisor_id,
+    parent_national_id, parent_phone, parent_email, parent_user_id
+) VALUES
+(201, 'S-201', 3.2, 1, 101, 'PN-201', '0100000201', 'parent201@mail.com', NULL),
+(202, 'S-202', 2.8, 1, 101, 'PN-202', '0100000202', 'parent202@mail.com', NULL),
+(203, 'S-203', 3.5, 2, 102, 'PN-203', '0100000203', 'parent203@mail.com', NULL),
+(204, 'S-204', 3.0, 2, 102, 'PN-204', '0100000204', 'parent204@mail.com', NULL),
+(205, 'S-205', 2.9, 3, 103, 'PN-205', '0100000205', 'parent205@mail.com', NULL),
+(206, 'S-206', 3.1, 3, 103, 'PN-206', '0100000206', 'parent206@mail.com', NULL),
+(207, 'S-207', 3.8, 4, 104, 'PN-207', '0100000207', 'parent207@mail.com', NULL),
+(208, 'S-208', 3.4, 4, 104, 'PN-208', '0100000208', 'parent208@mail.com', NULL),
+(209, 'S-209', 2.5, 5, 105, 'PN-209', '0100000209', 'parent209@mail.com', NULL),
+(210, 'S-210', 2.7, 5, 105, 'PN-210', '0100000210', 'parent210@mail.com', NULL);
 
 -- -----------------------------------------------------
 -- 4. Insert Semesters
@@ -245,8 +254,14 @@ CALL GenerateSemesterData(4, 4, 15); -- Sem 4: ASU4 + Dept Courses 16-20
 CALL GenerateCurrentSemester(5);     -- Sem 5: Dept Courses 21-25 + Course 1
 
 -- -----------------------------------------------------
--- 7. ENROLLMENTS & GRADES
+-- 7. ENROLLMENTS (EAV Model) & GRADES
 -- -----------------------------------------------------
+
+-- Step 1: Insert Enrollment Attributes (define available enrollment attributes)
+INSERT INTO EnrollmentAttributes (attribute_id, attribute_name, value_type) VALUES
+(1, 'status', 'text'),
+(2, 'enrollment_date', 'datetime'),
+(3, 'approval_date', 'datetime');
 
 -- Helper to Enroll Student in specific semester offerings linked to their dept
 DELIMITER //
@@ -257,9 +272,9 @@ CREATE PROCEDURE EnrollStudent(
     IN is_current BOOL
 )
 BEGIN
-    -- Enroll in all Dept sections for this semester
-    INSERT INTO Enrollment (student_id, section_id, status)
-    SELECT stud_id, s.section_id, 'approved'
+    -- Step 2: Insert Enrollment records (base table with student_id and section_id)
+    INSERT INTO Enrollment (student_id, section_id)
+    SELECT stud_id, s.section_id
     FROM Section s
     JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
     JOIN Course c ON oc.course_id = c.course_id
@@ -270,6 +285,54 @@ BEGIN
         OR
         -- If ASU Course (Only for non-current semesters)
         (is_current = FALSE AND c.course_id <= 10)
+    );
+    
+    -- Step 3: Insert Enrollment Attribute Values (status and dates for newly created enrollments)
+    INSERT INTO EnrollmentAttributeValues (enrollment_id, attribute_id, value)
+    SELECT 
+        e.enrollment_id,
+        1, -- status attribute
+        'approved'
+    FROM Enrollment e
+    JOIN Section s ON e.section_id = s.section_id
+    JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+    WHERE e.student_id = stud_id
+    AND oc.semester_id = sem_id
+    AND NOT EXISTS (
+        SELECT 1 FROM EnrollmentAttributeValues eav 
+        WHERE eav.enrollment_id = e.enrollment_id AND eav.attribute_id = 1
+    );
+    
+    INSERT INTO EnrollmentAttributeValues (enrollment_id, attribute_id, value)
+    SELECT 
+        e.enrollment_id,
+        2, -- enrollment_date attribute
+        DATE_FORMAT(sem.start_date, '%Y-%m-%d %H:%i:%s')
+    FROM Enrollment e
+    JOIN Section s ON e.section_id = s.section_id
+    JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+    JOIN Semester sem ON oc.semester_id = sem.semester_id
+    WHERE e.student_id = stud_id
+    AND oc.semester_id = sem_id
+    AND NOT EXISTS (
+        SELECT 1 FROM EnrollmentAttributeValues eav 
+        WHERE eav.enrollment_id = e.enrollment_id AND eav.attribute_id = 2
+    );
+    
+    INSERT INTO EnrollmentAttributeValues (enrollment_id, attribute_id, value)
+    SELECT 
+        e.enrollment_id,
+        3, -- approval_date attribute
+        DATE_FORMAT(sem.start_date, '%Y-%m-%d %H:%i:%s')
+    FROM Enrollment e
+    JOIN Section s ON e.section_id = s.section_id
+    JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+    JOIN Semester sem ON oc.semester_id = sem.semester_id
+    WHERE e.student_id = stud_id
+    AND oc.semester_id = sem_id
+    AND NOT EXISTS (
+        SELECT 1 FROM EnrollmentAttributeValues eav 
+        WHERE eav.enrollment_id = e.enrollment_id AND eav.attribute_id = 3
     );
 END //
 DELIMITER ;
@@ -298,19 +361,23 @@ CALL EnrollStudent(209, 5, 1, FALSE); CALL EnrollStudent(209, 5, 2, FALSE); CALL
 CALL EnrollStudent(210, 5, 3, FALSE); CALL EnrollStudent(210, 5, 4, FALSE); CALL EnrollStudent(210, 5, 5, TRUE);
 
 -- -----------------------------------------------------
--- 8. INSERT GRADES
+-- 8. INSERT GRADES (EAV Model)
 -- -----------------------------------------------------
 
+-- Step 1: Insert Grade Attributes (define available grade components)
+INSERT INTO GradeAttributes (attribute_id, attribute_name, value_type, max_value, description) VALUES
+(1, 'midterm', 'decimal', 20.00, 'Midterm exam grade (max 20)'),
+(2, 'project', 'decimal', 20.00, 'Project grade (max 20)'),
+(3, 'assignments_total', 'decimal', 10.00, 'Total assignments grade (max 10)'),
+(4, 'quizzes_total', 'decimal', 5.00, 'Total quizzes grade (max 5)'),
+(5, 'attendance', 'decimal', 5.00, 'Attendance grade (max 5)'),
+(6, 'final_exam_mark', 'decimal', 40.00, 'Final exam mark (max 40)');
+
+-- Step 2: Insert Grade records (base table with enrollment_id and final_letter_grade)
 -- A. Old Semesters (Full Grades)
-INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade)
+INSERT INTO Grade (enrollment_id, final_letter_grade)
 SELECT 
     enrollment_id,
-    15 + (RAND() * 5), -- Midterm (15-20)
-    15 + (RAND() * 5), -- Project (15-20)
-    8 + (RAND() * 2),  -- Assign (8-10)
-    4 + (RAND() * 1),  -- Quiz (4-5)
-    4 + (RAND() * 1),  -- Attendance (4-5)
-    30 + (RAND() * 10),-- Final (30-40, scaled to fit whatever remains or just nominal)
     ELT(FLOOR(1 + (RAND() * 3)), 'A', 'B', 'A-') -- Random Letter
 FROM Enrollment e
 JOIN Section s ON e.section_id = s.section_id
@@ -318,12 +385,91 @@ JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
 WHERE oc.semester_id < 5;
 
 -- B. Current Semester (Only Midterm, others NULL)
-INSERT INTO Grade (enrollment_id, midterm, project, assignments_total, quizzes_total, attendance, final_exam_mark, final_letter_grade)
+INSERT INTO Grade (enrollment_id, final_letter_grade)
 SELECT 
     enrollment_id,
-    10 + (RAND() * 10), -- Midterm (10-20)
-    NULL, NULL, NULL, NULL, NULL, NULL
+    NULL -- No final grade yet for current semester
 FROM Enrollment e
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id = 5;
+
+-- Step 3: Insert Grade Attribute Values (EAV values for each grade component)
+-- A. Old Semesters - Insert all grade components
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    1, -- midterm attribute
+    CAST(15 + (RAND() * 5) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    2, -- project attribute
+    CAST(15 + (RAND() * 5) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    3, -- assignments_total attribute
+    CAST(8 + (RAND() * 2) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    4, -- quizzes_total attribute
+    CAST(4 + (RAND() * 1) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    5, -- attendance attribute
+    CAST(4 + (RAND() * 1) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    6, -- final_exam_mark attribute
+    CAST(30 + (RAND() * 10) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
+JOIN Section s ON e.section_id = s.section_id
+JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
+WHERE oc.semester_id < 5;
+
+-- B. Current Semester - Insert only midterm
+INSERT INTO GradeAttributeValues (grade_id, attribute_id, value)
+SELECT 
+    g.grade_id,
+    1, -- midterm attribute
+    CAST(10 + (RAND() * 10) AS DECIMAL(5,2))
+FROM Grade g
+JOIN Enrollment e ON g.enrollment_id = e.enrollment_id
 JOIN Section s ON e.section_id = s.section_id
 JOIN OfferedCourse oc ON s.offered_course_id = oc.offered_course_id
 WHERE oc.semester_id = 5;
