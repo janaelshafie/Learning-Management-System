@@ -2,6 +2,7 @@ package com.asu_lms.lms.Controllers;
 
 import com.asu_lms.lms.Entities.*;
 import com.asu_lms.lms.Repositories.*;
+import com.asu_lms.lms.Services.EAVService;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class StudentController {
     private final SectionRepository sectionRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final DepartmentRepository departmentRepository;
+    private final EAVService eavService;
 
     public StudentController(
             StudentRepository studentRepository,
@@ -31,7 +33,8 @@ public class StudentController {
             DepartmentCourseRepository departmentCourseRepository,
             SectionRepository sectionRepository,
             EnrollmentRepository enrollmentRepository,
-            DepartmentRepository departmentRepository
+            DepartmentRepository departmentRepository,
+            EAVService eavService
     ) {
         this.studentRepository = studentRepository;
         this.semesterRepository = semesterRepository;
@@ -41,6 +44,7 @@ public class StudentController {
         this.sectionRepository = sectionRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.departmentRepository = departmentRepository;
+        this.eavService = eavService;
     }
 
     @GetMapping("/{studentId}/registration")
@@ -112,7 +116,7 @@ public class StudentController {
             Map<Integer, Enrollment> enrollmentBySectionId = new HashMap<>();
             for (Enrollment enrollment : enrollments) {
                 // Include approved, pending, and drop_pending enrollments
-                String status = enrollment.getStatus();
+                String status = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
                 if (!"approved".equals(status) && !"pending".equals(status) && !"drop_pending".equals(status)) {
                     continue;
                 }
@@ -331,7 +335,7 @@ public class StudentController {
             // Check for any enrollment (approved, pending, or drop_pending) in this section
             boolean alreadyInSection = studentEnrollments.stream()
                     .anyMatch(enrollment -> Objects.equals(enrollment.getSectionId(), sectionId) 
-                        && ("approved".equals(enrollment.getStatus()) || "pending".equals(enrollment.getStatus())));
+                        && ("approved".equals(eavService.getEnrollmentStatus(enrollment.getEnrollmentId())) || "pending".equals(eavService.getEnrollmentStatus(enrollment.getEnrollmentId()))));
             if (alreadyInSection) {
                 response.put("status", "error");
                 response.put("message", "You are already registered or have a pending registration in this section.");
@@ -341,7 +345,7 @@ public class StudentController {
             // Check if already registered in another section of the same course
             if (!studentEnrollments.isEmpty()) {
                 List<Integer> sectionIds = studentEnrollments.stream()
-                        .filter(e -> "approved".equals(e.getStatus()) || "pending".equals(e.getStatus()))
+                        .filter(e -> "approved".equals(eavService.getEnrollmentStatus(e.getEnrollmentId())) || "pending".equals(eavService.getEnrollmentStatus(e.getEnrollmentId())))
                         .map(Enrollment::getSectionId)
                         .collect(Collectors.toList());
                 if (!sectionIds.isEmpty()) {
@@ -364,8 +368,9 @@ public class StudentController {
             }
 
             // Check if there's already a pending enrollment for this section
-            List<Enrollment> pendingEnrollments = enrollmentRepository.findByStudentIdAndStatus(studentId, "pending");
-            boolean alreadyPending = pendingEnrollments.stream()
+            List<Enrollment> allEnrollments = enrollmentRepository.findByStudentId(studentId);
+            boolean alreadyPending = allEnrollments.stream()
+                    .filter(e -> "pending".equals(eavService.getEnrollmentStatus(e.getEnrollmentId())))
                     .anyMatch(e -> Objects.equals(e.getSectionId(), sectionId));
             if (alreadyPending) {
                 response.put("status", "error");
@@ -374,8 +379,10 @@ public class StudentController {
             }
 
             // Create enrollment with "pending" status - do NOT increment section enrollment yet
-            Enrollment enrollment = new Enrollment(studentId, sectionId, "pending");
+            Enrollment enrollment = new Enrollment(studentId, sectionId);
             enrollmentRepository.save(enrollment);
+            // Set status via EAV
+            eavService.setEnrollmentAttribute(enrollment, "status", "pending");
 
             Map<String, Object> data = new HashMap<>();
             data.put("enrollmentId", enrollment.getEnrollmentId());
@@ -434,7 +441,8 @@ public class StudentController {
             }
 
             Enrollment enrollment = enrollmentOpt.get();
-            System.out.println("Enrollment found - StudentId: " + enrollment.getStudentId() + ", SectionId: " + enrollment.getSectionId() + ", Status: " + enrollment.getStatus());
+            String enrollmentStatus = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
+            System.out.println("Enrollment found - StudentId: " + enrollment.getStudentId() + ", SectionId: " + enrollment.getSectionId() + ", Status: " + enrollmentStatus);
             
             if (!enrollment.getStudentId().equals(studentId)) {
                 System.out.println("ERROR: Enrollment studentId (" + enrollment.getStudentId() + ") does not match request studentId (" + studentId + ")");
@@ -493,7 +501,7 @@ public class StudentController {
                 return response;
             }
 
-            String currentStatus = enrollment.getStatus();
+            String currentStatus = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
             System.out.println("Current enrollment status: " + currentStatus);
             
             // Check if there's already a pending drop request
@@ -518,7 +526,7 @@ public class StudentController {
 
             // Set status to "drop_pending" - do NOT delete or decrement section enrollment yet
             System.out.println("Setting enrollment status to drop_pending...");
-            enrollment.setStatus("drop_pending");
+            eavService.setEnrollmentAttribute(enrollment, "status", "drop_pending");
             enrollmentRepository.save(enrollment);
             System.out.println("Enrollment saved successfully");
 

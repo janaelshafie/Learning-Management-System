@@ -2,6 +2,7 @@ package com.asu_lms.lms.Controllers;
 
 import com.asu_lms.lms.Entities.*;
 import com.asu_lms.lms.Repositories.*;
+import com.asu_lms.lms.Services.EAVService;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ public class InstructorController {
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final GradeRepository gradeRepository;
+    private final EAVService eavService;
 
     public InstructorController(
             InstructorRepository instructorRepository,
@@ -39,7 +41,8 @@ public class InstructorController {
             StudentRepository studentRepository,
             UserRepository userRepository,
             EnrollmentRepository enrollmentRepository,
-            GradeRepository gradeRepository
+            GradeRepository gradeRepository,
+            EAVService eavService
     ) {
         this.instructorRepository = instructorRepository;
         this.offeredCourseInstructorRepository = offeredCourseInstructorRepository;
@@ -53,6 +56,7 @@ public class InstructorController {
         this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.gradeRepository = gradeRepository;
+        this.eavService = eavService;
     }
 
     @GetMapping("/{instructorId}/dashboard")
@@ -393,12 +397,14 @@ public class InstructorController {
 
                     Map<String, Object> gradeData = new HashMap<>();
                     gradeRepository.findByEnrollmentId(enrollment.getEnrollmentId()).ifPresent(grade -> {
-                        gradeData.put("midterm", grade.getMidterm());
-                        gradeData.put("project", grade.getProject());
-                        gradeData.put("assignmentsTotal", grade.getAssignmentsTotal());
-                        gradeData.put("quizzesTotal", grade.getQuizzesTotal());
-                        gradeData.put("attendance", grade.getAttendance());
-                        gradeData.put("finalExamMark", grade.getFinalExamMark());
+                        // Get grade attributes from EAV
+                        Map<String, String> gradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
+                        gradeData.put("midterm", gradeAttributes.get("midterm"));
+                        gradeData.put("project", gradeAttributes.get("project"));
+                        gradeData.put("assignmentsTotal", gradeAttributes.get("assignments_total"));
+                        gradeData.put("quizzesTotal", gradeAttributes.get("quizzes_total"));
+                        gradeData.put("attendance", gradeAttributes.get("attendance"));
+                        gradeData.put("finalExamMark", gradeAttributes.get("final_exam_mark"));
                         gradeData.put("finalLetterGrade", grade.getFinalLetterGrade());
                     });
                     studentData.put("grade", gradeData);
@@ -443,25 +449,43 @@ public class InstructorController {
                     .orElseGet(() -> {
                         Grade g = new Grade();
                         g.setEnrollmentId(enrollmentId);
+                        gradeRepository.save(g);
                         return g;
                     });
 
-            applyGradeValue(grade::setMidterm, payload.get("midterm"));
-            applyGradeValue(grade::setProject, payload.get("project"));
-            applyGradeValue(grade::setAssignmentsTotal, payload.get("assignmentsTotal"));
-            applyGradeValue(grade::setQuizzesTotal, payload.get("quizzesTotal"));
-            applyGradeValue(grade::setAttendance, payload.get("attendance"));
-            applyGradeValue(grade::setFinalExamMark, payload.get("finalExamMark"));
+            // Update grade attributes using EAV
+            if (payload.containsKey("midterm")) {
+                eavService.setGradeAttribute(grade, "midterm", convertToString(payload.get("midterm")));
+            }
+            if (payload.containsKey("project")) {
+                eavService.setGradeAttribute(grade, "project", convertToString(payload.get("project")));
+            }
+            if (payload.containsKey("assignmentsTotal")) {
+                eavService.setGradeAttribute(grade, "assignments_total", convertToString(payload.get("assignmentsTotal")));
+            }
+            if (payload.containsKey("quizzesTotal")) {
+                eavService.setGradeAttribute(grade, "quizzes_total", convertToString(payload.get("quizzesTotal")));
+            }
+            if (payload.containsKey("attendance")) {
+                eavService.setGradeAttribute(grade, "attendance", convertToString(payload.get("attendance")));
+            }
+            if (payload.containsKey("finalExamMark")) {
+                eavService.setGradeAttribute(grade, "final_exam_mark", convertToString(payload.get("finalExamMark")));
+            }
+            if (payload.containsKey("finalLetterGrade")) {
+                grade.setFinalLetterGrade((String) payload.get("finalLetterGrade"));
+                gradeRepository.save(grade);
+            }
 
-            gradeRepository.save(grade);
-
+            // Get all grade attributes
+            Map<String, String> gradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
             Map<String, Object> gradeData = new HashMap<>();
-            gradeData.put("midterm", grade.getMidterm());
-            gradeData.put("project", grade.getProject());
-            gradeData.put("assignmentsTotal", grade.getAssignmentsTotal());
-            gradeData.put("quizzesTotal", grade.getQuizzesTotal());
-            gradeData.put("attendance", grade.getAttendance());
-            gradeData.put("finalExamMark", grade.getFinalExamMark());
+            gradeData.put("midterm", gradeAttributes.get("midterm"));
+            gradeData.put("project", gradeAttributes.get("project"));
+            gradeData.put("assignmentsTotal", gradeAttributes.get("assignments_total"));
+            gradeData.put("quizzesTotal", gradeAttributes.get("quizzes_total"));
+            gradeData.put("attendance", gradeAttributes.get("attendance"));
+            gradeData.put("finalExamMark", gradeAttributes.get("final_exam_mark"));
             gradeData.put("finalLetterGrade", grade.getFinalLetterGrade());
 
             response.put("status", "success");
@@ -474,22 +498,10 @@ public class InstructorController {
         return response;
     }
 
-    private void applyGradeValue(java.util.function.Consumer<BigDecimal> consumer, Object value) {
-        if (value == null || (value instanceof String && ((String) value).isBlank())) {
-            consumer.accept(null);
-            return;
-        }
-        try {
-            BigDecimal decimalValue;
-            if (value instanceof Number) {
-                decimalValue = BigDecimal.valueOf(((Number) value).doubleValue());
-            } else {
-                decimalValue = new BigDecimal(value.toString());
-            }
-            consumer.accept(decimalValue);
-        } catch (NumberFormatException ignored) {
-            // Skip invalid values silently
-        }
+    private String convertToString(Object value) {
+        if (value == null) return null;
+        if (value instanceof String && ((String) value).isBlank()) return null;
+        return value.toString();
     }
 
     private boolean isCurrentSemester(Semester semester, LocalDate today) {
@@ -529,7 +541,7 @@ public class InstructorController {
                 List<Enrollment> enrollments = enrollmentRepository.findByStudentId(advisee.getStudentId());
                 
                 for (Enrollment enrollment : enrollments) {
-                    String status = enrollment.getStatus();
+                    String status = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
                     if (!"pending".equals(status) && !"drop_pending".equals(status)) {
                         continue;
                     }
@@ -628,7 +640,7 @@ public class InstructorController {
             }
 
             Enrollment enrollment = enrollmentOpt.get();
-            String currentStatus = enrollment.getStatus();
+            String currentStatus = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
 
             // Verify this enrollment belongs to an advisee
             Optional<Student> studentOpt = studentRepository.findByStudentId(enrollment.getStudentId());
@@ -649,7 +661,7 @@ public class InstructorController {
             if ("approve".equalsIgnoreCase(action)) {
                 if ("pending".equals(currentStatus)) {
                     // Approve registration: change status to approved and increment section enrollment
-                    enrollment.setStatus("approved");
+                    eavService.setEnrollmentAttribute(enrollment, "status", "approved");
                     enrollmentRepository.save(enrollment);
                     
                     int currentEnrollment = section.getCurrentEnrollment() != null ? section.getCurrentEnrollment() : 0;
@@ -684,7 +696,7 @@ public class InstructorController {
                     response.put("message", "Registration request rejected");
                 } else if ("drop_pending".equals(currentStatus)) {
                     // Reject drop: change status back to approved
-                    enrollment.setStatus("approved");
+                    eavService.setEnrollmentAttribute(enrollment, "status", "approved");
                     enrollmentRepository.save(enrollment);
                     response.put("status", "success");
                     response.put("message", "Drop request rejected");

@@ -9,9 +9,9 @@ import java.util.List;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer> {
     List<Enrollment> findByStudentId(Integer studentId);
-    List<Enrollment> findByStudentIdAndStatus(Integer studentId, String status);
     List<Enrollment> findBySectionId(Integer sectionId);
-    List<Enrollment> findByStatus(String status);
+    // Note: Status queries removed - status is now in EAV model
+    // Use EAVService.getEnrollmentStatus() or filter by attribute values instead
 }
 
 

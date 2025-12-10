@@ -23,6 +23,7 @@ import com.asu_lms.lms.Repositories.CourseRepository;
 import com.asu_lms.lms.Repositories.DepartmentRepository;
 import com.asu_lms.lms.Repositories.SemesterRepository;
 import com.asu_lms.lms.Services.PasswordService;
+import com.asu_lms.lms.Services.EAVService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,6 +74,9 @@ public class AdminController {
 
     @Autowired
     private SemesterRepository semesterRepository;
+
+    @Autowired
+    private EAVService eavService;
 
     // Get all pending accounts
     @GetMapping("/pending-accounts")
@@ -684,9 +688,10 @@ public class AdminController {
             // We need to include drop_pending so students can see courses they're trying to drop
             List<Enrollment> allEnrollments = enrollmentRepository.findByStudentId(userId);
             List<Enrollment> enrollments = allEnrollments.stream()
-                    .filter(e -> "approved".equals(e.getStatus()) || 
-                                 "pending".equals(e.getStatus()) || 
-                                 "drop_pending".equals(e.getStatus()))
+                    .filter(e -> {
+                        String status = eavService.getEnrollmentStatus(e.getEnrollmentId());
+                        return "approved".equals(status) || "pending".equals(status) || "drop_pending".equals(status);
+                    })
                     .collect(java.util.stream.Collectors.toList());
             
             List<Map<String, Object>> courses = new ArrayList<>();
@@ -694,7 +699,7 @@ public class AdminController {
             int totalCredits = 0;
             
             for (Enrollment enrollment : enrollments) {
-                String enrollmentStatus = enrollment.getStatus();
+                String enrollmentStatus = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
                 // Get section details
                 Optional<Section> sectionOpt = sectionRepository.findBySectionId(enrollment.getSectionId());
                 if (!sectionOpt.isPresent()) continue;
@@ -747,14 +752,15 @@ public class AdminController {
                     String letterGrade = grade.getFinalLetterGrade();
                     courseData.put("grade", letterGrade != null ? letterGrade : "N/A");
                     
-                    // Add detailed marks - convert BigDecimal to Double
+                    // Add detailed marks from EAV
+                    Map<String, String> gradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
                     Map<String, Object> marks = new HashMap<>();
-                    marks.put("midterm", grade.getMidterm());
-                    marks.put("project", grade.getProject());
-                    marks.put("assignments_total", grade.getAssignmentsTotal());
-                    marks.put("quizzes_total", grade.getQuizzesTotal());
-                    marks.put("attendance", grade.getAttendance());
-                    marks.put("final_exam_mark", grade.getFinalExamMark());
+                    marks.put("midterm", gradeAttributes.get("midterm"));
+                    marks.put("project", gradeAttributes.get("project"));
+                    marks.put("assignments_total", gradeAttributes.get("assignments_total"));
+                    marks.put("quizzes_total", gradeAttributes.get("quizzes_total"));
+                    marks.put("attendance", gradeAttributes.get("attendance"));
+                    marks.put("final_exam_mark", gradeAttributes.get("final_exam_mark"));
                     marks.put("final_letter_grade", letterGrade);
                     courseData.put("marks", marks);
                     

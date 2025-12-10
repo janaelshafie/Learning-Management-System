@@ -1,6 +1,7 @@
 package com.asu_lms.lms.Entities;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "Enrollment")
@@ -10,22 +11,21 @@ public class Enrollment {
     @Column(name = "enrollment_id")
     private Integer enrollmentId;
 
-    @Column(name = "student_id")
+    @Column(name = "student_id", nullable = false)
     private Integer studentId;
 
-    @Column(name = "section_id")
+    @Column(name = "section_id", nullable = false)
     private Integer sectionId;
 
-    @Column(name = "status")
-    private String status;
+    @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EnrollmentAttributeValues> attributeValues;
 
     // Constructors
     public Enrollment() {}
 
-    public Enrollment(Integer studentId, Integer sectionId, String status) {
+    public Enrollment(Integer studentId, Integer sectionId) {
         this.studentId = studentId;
         this.sectionId = sectionId;
-        this.status = status;
     }
 
     // Getters and Setters
@@ -38,8 +38,8 @@ public class Enrollment {
     public Integer getSectionId() { return sectionId; }
     public void setSectionId(Integer sectionId) { this.sectionId = sectionId; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public List<EnrollmentAttributeValues> getAttributeValues() { return attributeValues; }
+    public void setAttributeValues(List<EnrollmentAttributeValues> attributeValues) { this.attributeValues = attributeValues; }
 }
 
 
