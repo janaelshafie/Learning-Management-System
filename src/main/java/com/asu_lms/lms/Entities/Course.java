@@ -1,6 +1,13 @@
 package com.asu_lms.lms.Entities;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "Course")
@@ -25,22 +32,31 @@ public class Course {
     @Column(name = "course_type")
     private String courseType; // 'core' or 'elective' - can be null for general courses
     
+    @Column(name = "department_code", nullable = false, length = 20)
+    private String departmentCode;
+    
+    @ManyToOne
+    @JoinColumn(name = "department_code", referencedColumnName = "department_code", insertable = false, updatable = false)
+    private Department department;
+    
     // Constructors
     public Course() {}
     
-    public Course(String courseCode, String title, String description, Integer credits) {
+    public Course(String courseCode, String title, String description, Integer credits, String departmentCode) {
         this.courseCode = courseCode;
         this.title = title;
         this.description = description;
         this.credits = credits;
+        this.departmentCode = departmentCode;
     }
     
-    public Course(String courseCode, String title, String description, Integer credits, String courseType) {
+    public Course(String courseCode, String title, String description, Integer credits, String courseType, String departmentCode) {
         this.courseCode = courseCode;
         this.title = title;
         this.description = description;
         this.credits = credits;
         this.courseType = courseType;
+        this.departmentCode = departmentCode;
     }
     
     // Getters and Setters
@@ -90,6 +106,22 @@ public class Course {
     
     public void setCourseType(String courseType) {
         this.courseType = courseType;
+    }
+    
+    public String getDepartmentCode() {
+        return departmentCode;
+    }
+    
+    public void setDepartmentCode(String departmentCode) {
+        this.departmentCode = departmentCode;
+    }
+    
+    public Department getDepartment() {
+        return department;
+    }
+    
+    public void setDepartment(Department department) {
+        this.department = department;
     }
 }
 

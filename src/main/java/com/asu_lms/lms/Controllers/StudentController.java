@@ -1,14 +1,44 @@
 package com.asu_lms.lms.Controllers;
 
-import com.asu_lms.lms.Entities.*;
-import com.asu_lms.lms.Repositories.*;
-import com.asu_lms.lms.Services.EAVService;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.asu_lms.lms.Entities.Course;
+import com.asu_lms.lms.Entities.Department;
+import com.asu_lms.lms.Entities.DepartmentCourse;
+import com.asu_lms.lms.Entities.Enrollment;
+import com.asu_lms.lms.Entities.OfferedCourse;
+import com.asu_lms.lms.Entities.Section;
+import com.asu_lms.lms.Entities.Semester;
+import com.asu_lms.lms.Entities.Student;
+import com.asu_lms.lms.Repositories.CourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentCourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentRepository;
+import com.asu_lms.lms.Repositories.EnrollmentRepository;
+import com.asu_lms.lms.Repositories.OfferedCourseRepository;
+import com.asu_lms.lms.Repositories.SectionRepository;
+import com.asu_lms.lms.Repositories.SemesterRepository;
+import com.asu_lms.lms.Repositories.StudentRepository;
+import com.asu_lms.lms.Services.EAVService;
 
 @RestController
 @RequestMapping("/api/student")
@@ -92,11 +122,30 @@ public class StudentController {
             boolean registrationOpen = Boolean.TRUE.equals(currentSemester.getRegistrationOpen());
             data.put("registrationOpen", registrationOpen);
 
+            // Get student's department code
+            Optional<Department> studentDeptOpt = departmentRepository.findById(student.getDepartmentId());
+            String studentDeptCode = null;
+            if (studentDeptOpt.isPresent()) {
+                studentDeptCode = studentDeptOpt.get().getDepartmentCode();
+            }
+
+            // Get courses where student's department is the PRIMARY department
+            Set<Integer> primaryCourseIds = new HashSet<>();
+            if (studentDeptCode != null) {
+                List<Course> primaryCourses = courseRepository.findByDepartmentCode(studentDeptCode);
+                primaryCourses.forEach(c -> primaryCourseIds.add(c.getCourseId()));
+            }
+
+            // Get courses from DepartmentCourse (additional departments)
             Integer asuDepartmentId = getAsuDepartmentId();
             List<DepartmentCourse> departmentCourses = departmentCourseRepository.findByDepartmentId(student.getDepartmentId());
-            Set<Integer> allowedCourseIds = departmentCourses.stream()
+            Set<Integer> additionalCourseIds = departmentCourses.stream()
                     .map(DepartmentCourse::getCourseId)
                     .collect(Collectors.toSet());
+
+            // Combine primary and additional course IDs
+            Set<Integer> allowedCourseIds = new HashSet<>(primaryCourseIds);
+            allowedCourseIds.addAll(additionalCourseIds);
 
             List<DepartmentCourse> asuDepartmentCourses = asuDepartmentId != null
                     ? departmentCourseRepository.findByDepartmentId(asuDepartmentId)
@@ -105,6 +154,9 @@ public class StudentController {
                     .map(DepartmentCourse::getCourseId)
                     .collect(Collectors.toSet());
 
+            // Build map of DepartmentCourse entries for course type lookup
+            // Note: Primary department courses won't have DepartmentCourse entries, 
+            // so we'll need to check the course's primary department_code separately
             Map<Integer, DepartmentCourse> departmentCourseByCourseId =
                     java.util.stream.Stream.concat(departmentCourses.stream(), asuDepartmentCourses.stream())
                             .collect(Collectors.toMap(DepartmentCourse::getCourseId, dc -> dc, (a, b) -> a));
@@ -298,13 +350,38 @@ public class StudentController {
 
             OfferedCourse offeredCourse = offeredCourseOpt.get();
 
-            Integer asuDepartmentId = getAsuDepartmentId();
+            // Get course to check primary department
+            Optional<Course> courseOpt = courseRepository.findById(offeredCourse.getCourseId());
+            if (courseOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Course not found.");
+                return response;
+            }
+            Course course = courseOpt.get();
+
+            // Get student's department
+            Optional<Department> studentDeptOpt = departmentRepository.findById(student.getDepartmentId());
+            if (studentDeptOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Student department not found.");
+                return response;
+            }
+            Department studentDept = studentDeptOpt.get();
+
+            // Check if course is available to student's department
+            // Method 1: Check if student's department is the primary department
+            boolean isPrimaryDepartment = course.getDepartmentCode().equals(studentDept.getDepartmentCode());
+            
+            // Method 2: Check if course is available through DepartmentCourse
             boolean courseAvailableToDepartment = departmentCourseRepository
                     .existsByDepartmentIdAndCourseId(student.getDepartmentId(), offeredCourse.getCourseId());
+            
+            // Method 3: Check if course is available as ASU course
+            Integer asuDepartmentId = getAsuDepartmentId();
             boolean courseIsAsu = asuDepartmentId != null && departmentCourseRepository
                     .existsByDepartmentIdAndCourseId(asuDepartmentId, offeredCourse.getCourseId());
 
-            if (!courseAvailableToDepartment && !courseIsAsu) {
+            if (!isPrimaryDepartment && !courseAvailableToDepartment && !courseIsAsu) {
                 response.put("status", "error");
                 response.put("message", "You are not eligible to register for this course.");
                 return response;

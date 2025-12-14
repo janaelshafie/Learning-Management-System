@@ -1,16 +1,28 @@
 package com.asu_lms.lms.Controllers;
 
-import com.asu_lms.lms.Entities.Department;
-import com.asu_lms.lms.Entities.Course;
-import com.asu_lms.lms.Entities.User;
-import com.asu_lms.lms.Entities.Instructor;
-import com.asu_lms.lms.Repositories.DepartmentRepository;
-import com.asu_lms.lms.Repositories.CourseRepository;
-import com.asu_lms.lms.Repositories.UserRepository;
-import com.asu_lms.lms.Repositories.InstructorRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.asu_lms.lms.Entities.Course;
+import com.asu_lms.lms.Entities.Department;
+import com.asu_lms.lms.Entities.Instructor;
+import com.asu_lms.lms.Entities.User;
+import com.asu_lms.lms.Repositories.CourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentRepository;
+import com.asu_lms.lms.Repositories.InstructorRepository;
+import com.asu_lms.lms.Repositories.UserRepository;
 
 @RestController
 @RequestMapping("/api/admin/departments")
@@ -46,15 +58,36 @@ public class DepartmentController {
     @PostMapping("/create")
     public Map<String, String> createDepartment(@RequestBody Map<String, String> request) {
         String name = request.get("name");
+        String departmentCode = request.get("departmentCode");
         String unitHeadIdStr = request.get("unitHeadId");
         
         Map<String, String> response = new HashMap<>();
         
         try {
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department name is required");
+                return response;
+            }
+            
+            if (departmentCode == null || departmentCode.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department code is required");
+                return response;
+            }
+            
             // Check if department name already exists
             if (departmentRepository.existsByName(name)) {
                 response.put("status", "error");
                 response.put("message", "Department with this name already exists");
+                return response;
+            }
+            
+            // Check if department code already exists
+            if (departmentRepository.existsByDepartmentCode(departmentCode)) {
+                response.put("status", "error");
+                response.put("message", "Department with this code already exists");
                 return response;
             }
             
@@ -71,7 +104,7 @@ public class DepartmentController {
                 }
             }
             
-            Department department = new Department(name, unitHeadId);
+            Department department = new Department(departmentCode.trim().toUpperCase(), name, unitHeadId);
             departmentRepository.save(department);
             
             response.put("status", "success");
@@ -90,6 +123,7 @@ public class DepartmentController {
     public Map<String, String> updateDepartment(@RequestBody Map<String, String> request) {
         String departmentIdStr = request.get("departmentId");
         String name = request.get("name");
+        String departmentCode = request.get("departmentCode");
         String unitHeadIdStr = request.get("unitHeadId");
         
         Map<String, String> response = new HashMap<>();
@@ -107,13 +141,29 @@ public class DepartmentController {
             Department department = departmentOpt.get();
             
             // Check if new name conflicts with existing departments
-            if (!department.getName().equals(name) && departmentRepository.existsByName(name)) {
+            if (name != null && !name.trim().isEmpty() && 
+                !department.getName().equals(name) && departmentRepository.existsByName(name)) {
                 response.put("status", "error");
                 response.put("message", "Department with this name already exists");
                 return response;
             }
             
-            department.setName(name);
+            // Check if new department code conflicts with existing departments
+            if (departmentCode != null && !departmentCode.trim().isEmpty() &&
+                !department.getDepartmentCode().equals(departmentCode) && 
+                departmentRepository.existsByDepartmentCode(departmentCode)) {
+                response.put("status", "error");
+                response.put("message", "Department with this code already exists");
+                return response;
+            }
+            
+            if (name != null && !name.trim().isEmpty()) {
+                department.setName(name);
+            }
+            
+            if (departmentCode != null && !departmentCode.trim().isEmpty()) {
+                department.setDepartmentCode(departmentCode.trim().toUpperCase());
+            }
             
             Integer unitHeadId = null;
             if (unitHeadIdStr != null && !unitHeadIdStr.trim().isEmpty()) {
@@ -211,10 +261,24 @@ public class DepartmentController {
         String description = request.get("description");
         String creditsStr = request.get("credits");
         String courseType = request.get("courseType"); // Optional: 'core' or 'elective'
+        String departmentCode = request.get("departmentCode"); // Required: primary department code
         
         Map<String, String> response = new HashMap<>();
         
         try {
+            // Validate required fields
+            if (courseCode == null || courseCode.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Course code is required");
+                return response;
+            }
+            
+            if (departmentCode == null || departmentCode.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department code is required");
+                return response;
+            }
+            
             // Check if course code already exists
             if (courseRepository.existsByCourseCode(courseCode)) {
                 response.put("status", "error");
@@ -222,13 +286,21 @@ public class DepartmentController {
                 return response;
             }
             
+            // Verify department exists
+            Optional<Department> deptOpt = departmentRepository.findByDepartmentCode(departmentCode.trim().toUpperCase());
+            if (deptOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department with code '" + departmentCode + "' not found");
+                return response;
+            }
+            
             Integer credits = Integer.parseInt(creditsStr);
             
             Course course;
             if (courseType != null && !courseType.trim().isEmpty()) {
-                course = new Course(courseCode, title, description, credits, courseType);
+                course = new Course(courseCode, title, description, credits, courseType, departmentCode.trim().toUpperCase());
             } else {
-                course = new Course(courseCode, title, description, credits);
+                course = new Course(courseCode, title, description, credits, departmentCode.trim().toUpperCase());
             }
             courseRepository.save(course);
             
@@ -252,6 +324,7 @@ public class DepartmentController {
         String description = request.get("description");
         String creditsStr = request.get("credits");
         String courseType = request.get("courseType"); // Optional: 'core' or 'elective'
+        String departmentCode = request.get("departmentCode"); // Optional: primary department code
         
         Map<String, String> response = new HashMap<>();
         
@@ -268,16 +341,36 @@ public class DepartmentController {
             Course course = courseOpt.get();
             
             // Check if new course code conflicts with existing courses
-            if (!course.getCourseCode().equals(courseCode) && courseRepository.existsByCourseCode(courseCode)) {
+            if (courseCode != null && !courseCode.trim().isEmpty() &&
+                !course.getCourseCode().equals(courseCode) && courseRepository.existsByCourseCode(courseCode)) {
                 response.put("status", "error");
                 response.put("message", "Course with this code already exists");
                 return response;
             }
             
-            course.setCourseCode(courseCode);
-            course.setTitle(title);
-            course.setDescription(description);
-            course.setCredits(Integer.parseInt(creditsStr));
+            // Verify department exists if department code is being updated
+            if (departmentCode != null && !departmentCode.trim().isEmpty()) {
+                Optional<Department> deptOpt = departmentRepository.findByDepartmentCode(departmentCode.trim().toUpperCase());
+                if (deptOpt.isEmpty()) {
+                    response.put("status", "error");
+                    response.put("message", "Department with code '" + departmentCode + "' not found");
+                    return response;
+                }
+                course.setDepartmentCode(departmentCode.trim().toUpperCase());
+            }
+            
+            if (courseCode != null && !courseCode.trim().isEmpty()) {
+                course.setCourseCode(courseCode);
+            }
+            if (title != null) {
+                course.setTitle(title);
+            }
+            if (description != null) {
+                course.setDescription(description);
+            }
+            if (creditsStr != null && !creditsStr.trim().isEmpty()) {
+                course.setCredits(Integer.parseInt(creditsStr));
+            }
             
             if (courseType != null) {
                 course.setCourseType(courseType.isEmpty() ? null : courseType);

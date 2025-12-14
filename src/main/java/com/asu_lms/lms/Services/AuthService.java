@@ -1,11 +1,12 @@
 package com.asu_lms.lms.Services;
 
-import com.asu_lms.lms.Entities.User;
-import com.asu_lms.lms.Repositories.UserRepository;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import com.asu_lms.lms.Entities.User;
+import com.asu_lms.lms.Repositories.UserRepository;
 
 @Service
 public class AuthService {
@@ -71,14 +72,13 @@ public class AuthService {
             // For parents, validate student national ID exists
             if ("parent".equals(role) && studentNationalId != null && !studentNationalId.trim().isEmpty()) {
                 Optional<User> studentOpt = userRepository.findByNationalId(studentNationalId);
-                if (studentOpt.isEmpty() || !"student".equals(studentOpt.get().getRole())) {
-                    // Student doesn't exist, create parent with rejected status
-                    User newUser = new User(nationalId, name, email, 
-                        (officialMail != null && !officialMail.trim().isEmpty()) ? officialMail : email, 
-                        phone, location, hashedPassword, role);
-                    newUser.setAccountStatus("rejected"); // Rejected because student doesn't exist
-                    userRepository.save(newUser);
-                    return "success"; // Still return success but with rejected status
+                if (studentOpt.isEmpty()) {
+                    // Student with this national ID doesn't exist
+                    return "Student with national ID " + studentNationalId + " not found. Please verify the student's national ID and try again.";
+                }
+                if (!"student".equals(studentOpt.get().getRole())) {
+                    // User exists but is not a student
+                    return "User with national ID " + studentNationalId + " is not a student. Please enter a valid student national ID.";
                 }
             }
 
