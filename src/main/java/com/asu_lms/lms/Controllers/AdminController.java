@@ -240,6 +240,12 @@ public class AdminController {
                 List<Student> students = studentRepository.findByParentUserId(user.getUserId());
                 if (!students.isEmpty()) {
                     StringBuilder studentNames = new StringBuilder();
+                    // Get the first student's national ID (assuming one parent per student for now)
+                    Optional<User> firstStudentUserOpt = userRepository.findById(students.get(0).getStudentId());
+                    if (firstStudentUserOpt.isPresent()) {
+                        userData.put("studentNationalId", firstStudentUserOpt.get().getNationalId());
+                    }
+                    
                     for (int i = 0; i < students.size(); i++) {
                         if (i > 0) studentNames.append(", ");
                         // Get student name from User table
@@ -253,6 +259,7 @@ public class AdminController {
                     userData.put("studentNames", studentNames.toString());
                 } else {
                     userData.put("studentNames", "No Students");
+                    userData.put("studentNationalId", null);
                 }
             }
             

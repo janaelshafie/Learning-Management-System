@@ -1,11 +1,30 @@
 package com.asu_lms.lms.Services;
 
-import com.asu_lms.lms.Entities.*;
-import com.asu_lms.lms.Repositories.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import com.asu_lms.lms.Entities.Course;
+import com.asu_lms.lms.Entities.Department;
+import com.asu_lms.lms.Entities.DepartmentCourse;
+import com.asu_lms.lms.Entities.Instructor;
+import com.asu_lms.lms.Entities.OfferedCourse;
+import com.asu_lms.lms.Entities.OfferedCourseInstructor;
+import com.asu_lms.lms.Entities.Section;
+import com.asu_lms.lms.Entities.User;
+import com.asu_lms.lms.Repositories.CourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentCourseRepository;
+import com.asu_lms.lms.Repositories.DepartmentRepository;
+import com.asu_lms.lms.Repositories.InstructorRepository;
+import com.asu_lms.lms.Repositories.OfferedCourseInstructorRepository;
+import com.asu_lms.lms.Repositories.OfferedCourseRepository;
+import com.asu_lms.lms.Repositories.SectionRepository;
+import com.asu_lms.lms.Repositories.UserRepository;
 
 @Service
 public class CourseManagementService {
@@ -122,6 +141,14 @@ public class CourseManagementService {
     public List<Map<String, Object>> getOfferedCoursesBySemester(Integer semesterId, Integer departmentId) {
         List<Map<String, Object>> result = new ArrayList<>();
         
+        // Get department to check department_code
+        Optional<Department> deptOpt = departmentRepository.findById(departmentId);
+        if (deptOpt.isEmpty()) {
+            return result; // Department not found
+        }
+        Department department = deptOpt.get();
+        String departmentCode = department.getDepartmentCode();
+        
         // Get all offered courses for this semester
         for (OfferedCourse oc : offeredCourseRepository.findAll()) {
             if (!oc.getSemesterId().equals(semesterId)) continue;
@@ -132,7 +159,11 @@ public class CourseManagementService {
             Course course = courseOpt.get();
             
             // Check if course belongs to this department
-            if (!departmentCourseRepository.existsByDepartmentIdAndCourseId(departmentId, oc.getCourseId())) {
+            // Either through DepartmentCourse table OR by matching department_code
+            boolean belongsToDepartment = departmentCourseRepository.existsByDepartmentIdAndCourseId(departmentId, oc.getCourseId())
+                    || (course.getDepartmentCode() != null && course.getDepartmentCode().equals(departmentCode));
+            
+            if (!belongsToDepartment) {
                 continue;
             }
             

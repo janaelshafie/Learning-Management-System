@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -417,6 +418,51 @@ public class DepartmentController {
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Error deleting course: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    // Get courses by department code (from Course table, not DepartmentCourse)
+    @GetMapping("/{departmentId}/courses-by-code")
+    public Map<String, Object> getCoursesByDepartmentCode(@PathVariable Integer departmentId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Optional<Department> deptOpt = departmentRepository.findById(departmentId);
+            if (deptOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department not found");
+                return response;
+            }
+            
+            Department department = deptOpt.get();
+            String departmentCode = department.getDepartmentCode();
+            
+            // Get all courses where department_code matches
+            List<Course> courses = courseRepository.findByDepartmentCode(departmentCode);
+            
+            // Convert to response format
+            List<Map<String, Object>> coursesList = new ArrayList<>();
+            for (Course course : courses) {
+                Map<String, Object> courseData = new HashMap<>();
+                courseData.put("courseId", course.getCourseId());
+                courseData.put("courseCode", course.getCourseCode());
+                courseData.put("title", course.getTitle());
+                courseData.put("description", course.getDescription());
+                courseData.put("credits", course.getCredits());
+                courseData.put("courseType", course.getCourseType());
+                courseData.put("departmentCode", course.getDepartmentCode());
+                coursesList.add(courseData);
+            }
+            
+            response.put("status", "success");
+            response.put("courses", coursesList);
+            response.put("count", coursesList.size());
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching courses: " + e.getMessage());
         }
         
         return response;
