@@ -1,0 +1,4 @@
+com\asu_lms\lms\LmsApplicationTests.class
+com\asu_lms\lms\Services\AuthServiceTest.class
+com\asu_lms\lms\Controllers\AdminControllerTest.class
+com\asu_lms\lms\Controllers\MessageControllerTest.class
