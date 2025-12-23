@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_services.dart';
+import '../../common/app_state.dart';
 
 class AdminSemesterDetailsPage extends StatefulWidget {
   final Map<String, dynamic> semester;
@@ -75,6 +76,49 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
           for (var course in courses) {
             course['departmentName'] = dept['name'];
             course['departmentId'] = dept['departmentId'];
+            
+            // Load room assignments for this course
+            try {
+              // Format dates to yyyy-MM-dd
+              String? startDateStr;
+              String? endDateStr;
+              
+              if (widget.semester['startDate'] != null) {
+                final startDate = DateTime.tryParse(widget.semester['startDate'].toString());
+                if (startDate != null) {
+                  startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+                }
+              }
+              
+              if (widget.semester['endDate'] != null) {
+                final endDate = DateTime.tryParse(widget.semester['endDate'].toString());
+                if (endDate != null) {
+                  endDateStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                }
+              }
+              
+              final roomAssignmentsResponse = await _apiService.getRoomAssignments(
+                startDate: startDateStr,
+                endDate: endDateStr,
+              );
+              if (roomAssignmentsResponse['status'] == 'success') {
+                final assignments = roomAssignmentsResponse['assignments'] ?? [];
+                // Find assignments for this course
+                final courseAssignments = assignments.where((assignment) {
+                  return assignment['relatedOfferedCourseId'] == course['offeredCourseId'] &&
+                         (assignment['isRecurring'] == true || assignment['isRecurring'] == 'true');
+                }).toList();
+                
+                if (courseAssignments.isNotEmpty) {
+                  // Get the first recurring assignment
+                  final assignment = courseAssignments[0];
+                  course['roomAssignment'] = assignment;
+                }
+              }
+            } catch (e) {
+              // Continue if room assignment fetch fails
+            }
+            
             newOfferedCourses.add(course);
           }
         }
@@ -87,6 +131,85 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
         _allOfferedCourses = newOfferedCourses;
       });
     }
+  }
+  
+  String _formatRoomAssignment(Map<String, dynamic>? assignment) {
+    if (assignment == null) return '';
+    
+    // Backend returns 'roomName' not 'roomNumber'
+    final roomName = assignment['roomName'] ?? assignment['roomNumber'] ?? 'Unknown';
+    final building = assignment['building'] ?? '';
+    final roomDisplay = building.toString().isNotEmpty ? '$building $roomName' : roomName.toString();
+    
+    // Extract day from recurrence pattern (e.g., "WEEKLY:Wednesday" -> "Wed")
+    String dayAbbr = '';
+    if (assignment['recurrencePattern'] != null) {
+      final pattern = assignment['recurrencePattern'].toString();
+      if (pattern.contains(':')) {
+        final dayName = pattern.split(':')[1];
+        final dayMap = {
+          'Monday': 'Mon',
+          'Tuesday': 'Tue',
+          'Wednesday': 'Wed',
+          'Thursday': 'Thu',
+          'Friday': 'Fri',
+          'Saturday': 'Sat',
+          'Sunday': 'Sun',
+        };
+        dayAbbr = dayMap[dayName] ?? dayName.substring(0, 3);
+      }
+    }
+    
+    // Extract time from start_datetime and end_datetime
+    String timeDisplay = '';
+    try {
+      if (assignment['startDatetime'] != null && assignment['endDatetime'] != null) {
+        final startStr = assignment['startDatetime'].toString();
+        final endStr = assignment['endDatetime'].toString();
+        
+        // Parse datetime strings (format: "yyyy-MM-dd HH:mm:ss" or timestamp)
+        DateTime? startTime;
+        DateTime? endTime;
+        
+        if (startStr.contains('T')) {
+          startTime = DateTime.parse(startStr.split('T')[0] + ' ' + startStr.split('T')[1].split('.')[0]);
+        } else if (startStr.contains(' ')) {
+          startTime = DateTime.parse(startStr.split('.')[0]);
+        }
+        
+        if (endStr.contains('T')) {
+          endTime = DateTime.parse(endStr.split('T')[0] + ' ' + endStr.split('T')[1].split('.')[0]);
+        } else if (endStr.contains(' ')) {
+          endTime = DateTime.parse(endStr.split('.')[0]);
+        }
+        
+        if (startTime != null && endTime != null) {
+          final startHour = startTime.hour;
+          final startMin = startTime.minute;
+          final endHour = endTime.hour;
+          final endMin = endTime.minute;
+          
+          // Format as "HH:MM-HH:MM" or "H-H" if minutes are 0
+          if (startMin == 0 && endMin == 0) {
+            timeDisplay = '$startHour-$endHour';
+          } else {
+            timeDisplay = '${startHour.toString().padLeft(2, '0')}:${startMin.toString().padLeft(2, '0')}-${endHour.toString().padLeft(2, '0')}:${endMin.toString().padLeft(2, '0')}';
+          }
+        }
+      }
+    } catch (e) {
+      // If parsing fails, try to extract from string
+    }
+    
+    if (dayAbbr.isNotEmpty && timeDisplay.isNotEmpty) {
+      return '$roomDisplay, $dayAbbr $timeDisplay';
+    } else if (dayAbbr.isNotEmpty) {
+      return '$roomDisplay, $dayAbbr';
+    } else if (timeDisplay.isNotEmpty) {
+      return '$roomDisplay, $timeDisplay';
+    }
+    
+    return roomDisplay;
   }
 
   String _formatDate(String? dateString) {
@@ -288,13 +411,13 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
       return;
     }
 
-    // Load instructors for the department
-    List<dynamic> instructors = [];
+    // Load all instructors
+    List<dynamic> allInstructors = [];
     try {
       final instResponse =
-          await _apiService.getInstructorsByDepartment(departmentId);
+          await _apiService.getAllInstructorsForAssignment();
       if (instResponse['status'] == 'success') {
-        instructors = instResponse['instructors'] ?? [];
+        allInstructors = instResponse['instructors'] ?? [];
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -303,85 +426,490 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
       return;
     }
 
-    if (instructors.isEmpty) {
+    if (allInstructors.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No instructors available for this department'),
+          content: Text('No instructors available'),
         ),
       );
       return;
     }
 
     int? selectedInstructorId;
+    String searchQuery = '';
+    List<dynamic> filteredInstructors = allInstructors;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Assign Instructor'),
-          content: DropdownButtonFormField<int?>(
-            decoration: const InputDecoration(
-              labelText: 'Select Instructor',
-              border: OutlineInputBorder(),
-            ),
-            items: instructors.map((instructor) {
-              return DropdownMenuItem<int?>(
-                value: instructor['instructorId'],
-                child: Text(
-                  instructor['name'] ?? 'Unknown Instructor',
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                selectedInstructorId = value;
-              });
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: selectedInstructorId == null
-                  ? null
-                  : () async {
-                      try {
-                        final result = await _apiService.assignInstructor(
-                          offeredCourse['offeredCourseId'],
-                          selectedInstructorId!,
-                          departmentId,
-                        );
+        builder: (context, setDialogState) {
+          // Filter instructors based on search query
+          if (searchQuery.isNotEmpty) {
+            filteredInstructors = allInstructors.where((instructor) {
+              final name = (instructor['name'] ?? '').toString().toLowerCase();
+              final email = (instructor['email'] ?? '').toString().toLowerCase();
+              final query = searchQuery.toLowerCase();
+              return name.contains(query) || email.contains(query);
+            }).toList();
+          } else {
+            filteredInstructors = allInstructors;
+          }
 
-                        if (result['status'] == 'success') {
-                          Navigator.of(context).pop();
-                          _loadOfferedCourses();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Instructor assigned successfully'),
-                            ),
+          return AlertDialog(
+            title: const Text('Assign Instructor'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Search field
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search Instructor',
+                        hintText: 'Type name or email to search...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                          selectedInstructorId = null; // Reset selection on search
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Dropdown with filtered instructors
+                    DropdownButtonFormField<int?>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Instructor',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: selectedInstructorId,
+                      items: filteredInstructors.map((instructor) {
+                        final name = instructor['name'] ?? 'Unknown Instructor';
+                        final email = instructor['email'] ?? '';
+                        String displayName = name;
+                        if (email.isNotEmpty) {
+                          displayName += ' ($email)';
+                        }
+                        return DropdownMenuItem<int?>(
+                          value: instructor['instructorId'],
+                          child: Text(displayName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedInstructorId = value;
+                        });
+                      },
+                    ),
+                    if (filteredInstructors.isEmpty && searchQuery.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'No instructors found matching "$searchQuery"',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: selectedInstructorId == null
+                    ? null
+                    : () async {
+                        try {
+                          final result = await _apiService.assignInstructor(
+                            offeredCourse['offeredCourseId'],
+                            selectedInstructorId!,
+                            departmentId,
                           );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                result['message'] ??
-                                    'Error assigning instructor',
+
+                          if (result['status'] == 'success') {
+                            Navigator.of(context).pop();
+                            _loadOfferedCourses();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Instructor assigned successfully'),
                               ),
-                            ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result['message'] ??
+                                      'Error assigning instructor',
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
                           );
                         }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
-                    },
-              child: const Text('Assign'),
-            ),
-          ],
+                      },
+                child: const Text('Assign'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _assignRoom(Map<String, dynamic> offeredCourse) async {
+    if (widget.isReadOnly) return;
+
+    // Check if currentUserId is set
+    if (currentUserId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User not logged in. Please log in again.'),
         ),
+      );
+      return;
+    }
+
+    // Load all rooms
+    List<dynamic> allRooms = [];
+    try {
+      final roomsResponse = await _apiService.getRooms();
+      if (roomsResponse['status'] == 'success') {
+        allRooms = roomsResponse['rooms'] ?? [];
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              roomsResponse['message'] ?? 'Error loading rooms',
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading rooms: $e')),
+      );
+      return;
+    }
+
+    if (allRooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No rooms available'),
+        ),
+      );
+      return;
+    }
+
+    int? selectedRoomId;
+    String searchQuery = '';
+    String? selectedDayOfWeek;
+    TimeOfDay? startTime;
+    TimeOfDay? endTime;
+    List<dynamic> filteredRooms = allRooms;
+    
+    final List<String> weekDays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Filter rooms based on search query
+          if (searchQuery.isNotEmpty) {
+            filteredRooms = allRooms.where((room) {
+              final roomNumber = (room['roomNumber'] ?? '').toString().toLowerCase();
+              final building = (room['building'] ?? '').toString().toLowerCase();
+              final roomType = (room['roomType'] ?? '').toString().toLowerCase();
+              final query = searchQuery.toLowerCase();
+              return roomNumber.contains(query) || 
+                     building.contains(query) || 
+                     roomType.contains(query);
+            }).toList();
+          } else {
+            filteredRooms = allRooms;
+          }
+
+          return AlertDialog(
+            title: const Text('Assign Room'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Search field
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search Room',
+                        hintText: 'Type room number, building, or type...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                          selectedRoomId = null; // Reset selection on search
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Room dropdown
+                    DropdownButtonFormField<int?>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Room',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: selectedRoomId,
+                      items: filteredRooms.map((room) {
+                        final roomNumber = room['roomNumber'] ?? 'Unknown';
+                        final building = room['building'] ?? '';
+                        final roomType = room['roomType'] ?? '';
+                        final capacity = room['capacity'] ?? '';
+                        String displayName = '$building $roomNumber';
+                        if (roomType.isNotEmpty) {
+                          displayName += ' ($roomType)';
+                        }
+                        if (capacity.toString().isNotEmpty) {
+                          displayName += ' - Capacity: $capacity';
+                        }
+                        return DropdownMenuItem<int?>(
+                          value: room['roomId'],
+                          child: Text(displayName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedRoomId = value;
+                        });
+                      },
+                    ),
+                    if (filteredRooms.isEmpty && searchQuery.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'No rooms found matching "$searchQuery"',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    // Day of week selector (always weekly recurring)
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Day of Week',
+                        border: OutlineInputBorder(),
+                        helperText: 'Select which day of the week (repeats weekly for entire semester)',
+                      ),
+                      value: selectedDayOfWeek,
+                      items: weekDays.map((day) {
+                        return DropdownMenuItem<String>(
+                          value: day,
+                          child: Text(day),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedDayOfWeek = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    // Start time picker
+                    ListTile(
+                      title: Text(
+                        startTime == null
+                            ? 'Select Start Time'
+                            : 'Start Time: ${startTime!.format(context)}',
+                      ),
+                      trailing: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            startTime = picked;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    // End time picker
+                    ListTile(
+                      title: Text(
+                        endTime == null
+                            ? 'Select End Time'
+                            : 'End Time: ${endTime!.format(context)}',
+                      ),
+                      trailing: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now().replacing(
+                            hour: (TimeOfDay.now().hour + 1) % 24,
+                          ),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            endTime = picked;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: (selectedRoomId == null ||
+                        selectedDayOfWeek == null ||
+                        startTime == null ||
+                        endTime == null)
+                    ? null
+                    : () async {
+                        try {
+                          // Validate end time is after start time
+                          final startMinutes = startTime!.hour * 60 + startTime!.minute;
+                          final endMinutes = endTime!.hour * 60 + endTime!.minute;
+                          
+                          if (endMinutes <= startMinutes) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('End time must be after start time'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Always weekly recurring for entire semester
+                          // Get semester start date
+                          final semesterStartDate = widget.semester['startDate'];
+                          DateTime firstOccurrence;
+                          
+                          if (semesterStartDate != null) {
+                            try {
+                              firstOccurrence = DateTime.parse(semesterStartDate);
+                            } catch (e) {
+                              firstOccurrence = DateTime.now();
+                            }
+                          } else {
+                            firstOccurrence = DateTime.now();
+                          }
+                          
+                          // Find the first occurrence of the selected day
+                          final targetDayIndex = weekDays.indexOf(selectedDayOfWeek!);
+                          final currentDayIndex = firstOccurrence.weekday - 1;
+                          int daysToAdd = (targetDayIndex - currentDayIndex + 7) % 7;
+                          if (daysToAdd == 0 && firstOccurrence.weekday - 1 != targetDayIndex) {
+                            daysToAdd = 7; // If same day but in future, add a week
+                          }
+                          final firstDate = firstOccurrence.add(Duration(days: daysToAdd));
+                          
+                          final startDateTime = DateTime(
+                            firstDate.year,
+                            firstDate.month,
+                            firstDate.day,
+                            startTime!.hour,
+                            startTime!.minute,
+                          );
+                          final endDateTime = DateTime(
+                            firstDate.year,
+                            firstDate.month,
+                            firstDate.day,
+                            endTime!.hour,
+                            endTime!.minute,
+                          );
+                          
+                          final startDatetimeStr =
+                              '${startDateTime.year}-${startDateTime.month.toString().padLeft(2, '0')}-${startDateTime.day.toString().padLeft(2, '0')} ${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}:00';
+                          final endDatetimeStr =
+                              '${endDateTime.year}-${endDateTime.month.toString().padLeft(2, '0')}-${endDateTime.day.toString().padLeft(2, '0')} ${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}:00';
+                          
+                          // Build request data - always recurring weekly
+                          final requestData = {
+                            'roomId': selectedRoomId!,
+                            'assignedByUserId': currentUserId,
+                            'assignmentType': 'course',
+                            'relatedOfferedCourseId': offeredCourse['offeredCourseId'],
+                            'startDatetime': startDatetimeStr,
+                            'endDatetime': endDatetimeStr,
+                            'isRecurring': true,
+                            'recurrencePattern': 'WEEKLY:$selectedDayOfWeek',
+                          };
+                          
+                          // Set recurrence end date to semester end date
+                          final semesterEndDate = widget.semester['endDate'];
+                          if (semesterEndDate != null) {
+                            try {
+                              final endDate = DateTime.parse(semesterEndDate);
+                              requestData['recurrenceEndDate'] = 
+                                  '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                            } catch (e) {
+                              // If parsing fails, calculate end date
+                              final endDate = DateTime.now().add(const Duration(days: 90));
+                              requestData['recurrenceEndDate'] = 
+                                  '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                            }
+                          }
+
+                          final result = await _apiService.adminAssignRoom(requestData);
+
+                          if (result['status'] == 'success') {
+                            Navigator.of(context).pop();
+                            _loadOfferedCourses(); // Reload to show the room assignment
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Room assigned successfully'),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result['message'] ?? 'Error assigning room',
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      },
+                child: const Text('Assign'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -587,7 +1115,7 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${course['courseCode'] ?? ''} - ${course['title'] ?? 'Unknown'}',
+                                          '${course['title'] ?? 'Unknown'} ${course['courseCode'] ?? ''}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
@@ -595,15 +1123,7 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Department: ${course['departmentName'] ?? 'Unknown'}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Credits: ${course['credits'] ?? 'N/A'}',
+                                          widget.semester['name'] ?? 'Current Semester',
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: Colors.grey[700],
@@ -617,6 +1137,8 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
                                       onSelected: (value) {
                                         if (value == 'assign') {
                                           _assignInstructor(course);
+                                        } else if (value == 'assignRoom') {
+                                          _assignRoom(course);
                                         } else if (value == 'close') {
                                           _closeCourse(course);
                                         }
@@ -630,6 +1152,16 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
                                                   size: 20),
                                               SizedBox(width: 8),
                                               Text('Assign Instructor'),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'assignRoom',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.meeting_room, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('Assign Room'),
                                             ],
                                           ),
                                         ),
@@ -685,6 +1217,37 @@ class _AdminSemesterDetailsPageState extends State<AdminSemesterDetailsPage> {
                                     fontSize: 14,
                                     color: Colors.grey[600],
                                     fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                              if (course['roomAssignment'] != null) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.meeting_room,
+                                      size: 16,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Room: ${_formatRoomAssignment(course['roomAssignment'])}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ] else if (!widget.isReadOnly) ...[
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: () => _assignRoom(course),
+                                  icon: const Icon(Icons.meeting_room, size: 16),
+                                  label: const Text('Assign Room'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.blue,
                                   ),
                                 ),
                               ],

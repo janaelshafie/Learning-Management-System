@@ -97,6 +97,34 @@ public class CourseManagementService {
     }
     
     /**
+     * Get all instructors regardless of department
+     */
+    public List<Map<String, Object>> getAllInstructors() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        
+        // Get all instructors
+        List<Instructor> allInstructors = instructorRepository.findAll();
+        
+        for (Instructor instructor : allInstructors) {
+            // Get the user info
+            Optional<User> userOpt = userRepository.findById(instructor.getInstructorId());
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                Map<String, Object> instructorData = new HashMap<>();
+                instructorData.put("instructorId", instructor.getInstructorId());
+                instructorData.put("name", user.getName());
+                instructorData.put("email", user.getEmail());
+                instructorData.put("instructorType", instructor.getInstructorType());
+                instructorData.put("officeHours", instructor.getOfficeHours());
+                instructorData.put("departmentId", instructor.getDepartmentId());
+                result.add(instructorData);
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
      * Get instructors for a specific department
      * Filters instructors to only show those who belong to the department
      */
@@ -262,10 +290,7 @@ public class CourseManagementService {
     
     /**
      * Assign an instructor to an offered course
-     * Validates that:
-     * 1. For Department Courses: Course belongs to department and Instructor belongs to same department
-     * 2. For ASU Courses: Any instructor can teach (no department restriction)
-     * This ensures department instructors cannot teach courses outside their department
+     * Any instructor can be assigned to any course regardless of department
      */
     public Map<String, Object> assignInstructorToCourse(Integer offeredCourseId, Integer instructorId, Integer departmentId) {
         Map<String, Object> response = new HashMap<>();
@@ -281,21 +306,11 @@ public class CourseManagementService {
             
             OfferedCourse offeredCourse = offeredCourseOpt.get();
             
-            // Get the course to check if it's ASU or department course
+            // Get the course to check if it exists
             Optional<Course> courseOpt = courseRepository.findById(offeredCourse.getCourseId());
             if (!courseOpt.isPresent()) {
                 response.put("status", "error");
                 response.put("message", "Course not found");
-                return response;
-            }
-            
-            // Validate course belongs to the department
-            boolean belongsToDepartment = departmentCourseRepository
-                .existsByDepartmentIdAndCourseId(departmentId, offeredCourse.getCourseId());
-            
-            if (!belongsToDepartment) {
-                response.put("status", "error");
-                response.put("message", "Course does not belong to the specified department");
                 return response;
             }
             
@@ -304,34 +319,6 @@ public class CourseManagementService {
             if (!instructorOpt.isPresent()) {
                 response.put("status", "error");
                 response.put("message", "Instructor not found");
-                return response;
-            }
-            
-            Instructor instructor = instructorOpt.get();
-            
-            // Validate instructor belongs to the selected department
-            if (instructor.getDepartmentId() == null) {
-                response.put("status", "error");
-                response.put("message", "Instructor has no department assigned");
-                return response;
-            }
-            
-            if (!instructor.getDepartmentId().equals(departmentId)) {
-                // Get department names for error message
-                Optional<Department> selectedDeptOpt = departmentRepository.findById(departmentId);
-                Optional<Department> instructorDeptOpt = departmentRepository.findById(instructor.getDepartmentId());
-                
-                String selectedDeptName = selectedDeptOpt.isPresent() ? selectedDeptOpt.get().getName() : "Unknown";
-                String instructorDeptName = instructorDeptOpt.isPresent() ? instructorDeptOpt.get().getName() : "Unknown";
-                String instructorName = userRepository.findById(instructorId)
-                    .map(User::getName)
-                    .orElse("Unknown");
-                
-                response.put("status", "error");
-                response.put("message", 
-                    "Instructor '" + instructorName + "' from '" + instructorDeptName + 
-                    "' cannot teach courses in '" + selectedDeptName + "' department. " +
-                    "Instructors can only teach courses from their own department.");
                 return response;
             }
             

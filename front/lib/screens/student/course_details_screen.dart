@@ -9,7 +9,7 @@ class CourseDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Extract marks data - if available
     Map<String, dynamic> marks = course['marks'] ?? {};
-    
+
     // Get marks from database
     Object? midtermValue = marks['midterm'];
     Object? projectValue = marks['project'];
@@ -17,7 +17,7 @@ class CourseDetailsScreen extends StatelessWidget {
     Object? quizzesValue = marks['quizzes_total'];
     Object? attendanceValue = marks['attendance'];
     String? finalLetterGrade = marks['final_letter_grade'];
-    
+
     // Convert to double if available (null if field is null in DB)
     double? midterm = _convertToDouble(midtermValue);
     double? project = _convertToDouble(projectValue);
@@ -26,13 +26,12 @@ class CourseDetailsScreen extends StatelessWidget {
     double? attendance = _convertToDouble(attendanceValue);
 
     // Check if marks data exists in the database
-    // If marks map exists and has entries, consider marks as "uploaded"
     bool hasMarksData = marks.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: Text(course['code'] ?? 'Course Details'),
+        title: Text(course['code'] ?? course['courseCode'] ?? 'Course Details'),
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
       ),
@@ -52,13 +51,14 @@ class CourseDetailsScreen extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E3A8A).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            course['code'] ?? 'N/A',
+                            course['code'] ?? course['courseCode'] ?? 'N/A',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -76,7 +76,7 @@ class CourseDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      course['name'] ?? 'Course Name',
+                      course['name'] ?? course['courseTitle'] ?? 'Course Name',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -94,12 +94,16 @@ class CourseDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        _buildInfoChip(Icons.credit_card, '${course['credits'] ?? 0} Credits'),
+                        _buildInfoChip(
+                            Icons.credit_card,
+                            '${course['credits'] ?? 0} Credits'),
                         const SizedBox(width: 12),
-                        _buildInfoChip(Icons.calendar_today, course['semester'] ?? 'Unknown'),
+                        _buildInfoChip(Icons.calendar_today,
+                            course['semester'] ?? 'Unknown'),
                         if (course['grade'] != null) ...[
                           const SizedBox(width: 12),
-                          _buildInfoChip(Icons.grade, 'Grade: ${course['grade']}'),
+                          _buildInfoChip(
+                              Icons.grade, 'Grade: ${course['grade']}'),
                         ],
                       ],
                     ),
@@ -185,7 +189,8 @@ class CourseDetailsScreen extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: _getGradeColor(finalLetterGrade).withOpacity(0.1),
+                          color: _getGradeColor(finalLetterGrade)
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _getGradeColor(finalLetterGrade),
@@ -250,9 +255,6 @@ class CourseDetailsScreen extends StatelessWidget {
 
   Widget _buildMarkCard(String label, double? value, int maxPoints) {
     String displayValue;
-    // Always show the value if marks exist in database
-    // If marks field is null or not in database, show "-"
-    // If marks field exists but is 0, show "0.0" 
     if (value != null) {
       displayValue = '${value.toStringAsFixed(1)}/$maxPoints';
     } else {
@@ -295,7 +297,7 @@ class CourseDetailsScreen extends StatelessWidget {
 
   Color _getGradeColor(String? grade) {
     if (grade == null) return Colors.grey;
-    
+
     switch (grade.toUpperCase()) {
       case 'A':
       case 'A+':
@@ -324,4 +326,3 @@ class CourseDetailsScreen extends StatelessWidget {
     return double.tryParse(value.toString());
   }
 }
-

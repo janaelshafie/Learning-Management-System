@@ -228,16 +228,23 @@ class _InstructorScreenState extends State<InstructorScreen>
             ),
             const SizedBox(height: 20),
           ],
-          _buildNavItem(0, 'Dashboard', Icons.dashboard),
-          _buildNavItem(1, 'Profile', Icons.person),
-          _buildNavItem(2, 'My Courses', Icons.menu_book),
-          _buildNavItem(3, 'Office Hours', Icons.schedule),
-          _buildNavItem(6, 'Book Room', Icons.meeting_room),
-          _buildNavItem(7, 'Room Schedule', Icons.event_note),
-          if (_isProfessor)
-            _buildNavItem(4, 'Registration Requests', Icons.pending_actions),
-          if (_isProfessor) _buildNavItem(5, 'Advisees', Icons.group),
-          const Spacer(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildNavItem(0, 'Dashboard', Icons.dashboard),
+                  _buildNavItem(1, 'Profile', Icons.person),
+                  _buildNavItem(2, 'My Courses', Icons.menu_book),
+                  _buildNavItem(3, 'Office Hours', Icons.schedule),
+                  _buildNavItem(6, 'Book Room', Icons.meeting_room),
+                  _buildNavItem(7, 'Room Schedule', Icons.event_note),
+                  if (_isProfessor)
+                    _buildNavItem(4, 'Registration Requests', Icons.pending_actions),
+                  if (_isProfessor) _buildNavItem(5, 'Advisees', Icons.group),
+                ],
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
@@ -950,8 +957,6 @@ class _InstructorScreenState extends State<InstructorScreen>
                   '';
               final String semester =
                   course['semester']?.toString() ?? 'Current Semester';
-              final String department =
-                  course['departmentName']?.toString() ?? 'Department';
               final int totalStudents = course['totalStudents'] ?? 0;
               final List<Map<String, dynamic>> sections =
                   List<Map<String, dynamic>>.from(course['sections'] ?? []);
@@ -967,10 +972,10 @@ class _InstructorScreenState extends State<InstructorScreen>
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.menu_book),
                         title: Text(
-                          courseTitle,
+                          '$courseTitle $courseCode',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('$courseCode • $semester • $department'),
+                        subtitle: Text(semester),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -1529,13 +1534,21 @@ class _InstructorScreenState extends State<InstructorScreen>
       return;
     }
 
+    // Always send the current slots (even if empty, to clear office hours)
+    // Filter out any invalid slots (missing required fields) before sending
     final slotsPayload = _officeHours
+        .where((slot) {
+          final day = slot['day']?.toString().trim() ?? '';
+          final from = slot['from']?.toString().trim() ?? '';
+          final to = slot['to']?.toString().trim() ?? '';
+          return day.isNotEmpty && from.isNotEmpty && to.isNotEmpty;
+        })
         .map(
           (slot) => {
-            'day': slot['day'] ?? '',
-            'from': slot['from'] ?? '',
-            'to': slot['to'] ?? '',
-            'location': slot['location'] ?? '',
+            'day': slot['day']?.toString().trim() ?? '',
+            'from': slot['from']?.toString().trim() ?? '',
+            'to': slot['to']?.toString().trim() ?? '',
+            'location': slot['location']?.toString().trim() ?? '',
           },
         )
         .toList();
@@ -1567,7 +1580,10 @@ class _InstructorScreenState extends State<InstructorScreen>
           _officeHours = updated;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Office hours updated successfully')),
+          const SnackBar(
+            content: Text('Office hours updated successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1575,12 +1591,16 @@ class _InstructorScreenState extends State<InstructorScreen>
             content: Text(
               'Failed to update office hours: ${result['message'] ?? 'Unknown error'}',
             ),
+            backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating office hours: $e')),
+        SnackBar(
+          content: Text('Error updating office hours: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) {
@@ -1589,70 +1609,6 @@ class _InstructorScreenState extends State<InstructorScreen>
         });
       }
     }
-  }
-
-  // ---------- SERVICES ----------
-
-  Widget _buildInstructorServices() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Instructor Services',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A8A),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            elevation: 4,
-            child: Column(
-              children: [
-                TabBar(
-                  controller: _tabController,
-                  labelColor: const Color(0xFF1E3A8A),
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF1E3A8A),
-                  tabs: const [
-                    Tab(text: 'Grade Upload'),
-                    Tab(text: 'Requests'),
-                  ],
-                ),
-                SizedBox(
-                  height: 400,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [_buildGradeUpload(), _buildRequests()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGradeUpload() {
-    return Center(
-      child: Text(
-        'Grade upload functionality will be implemented here.',
-        style: TextStyle(color: Colors.grey[600]),
-      ),
-    );
-  }
-
-  Widget _buildRequests() {
-    return Center(
-      child: Text(
-        'Student requests (add/drop, recommendations) will be listed here.',
-        style: TextStyle(color: Colors.grey[600]),
-      ),
-    );
   }
 
   // ---------- SHARED HELPERS ----------

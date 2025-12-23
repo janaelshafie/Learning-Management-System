@@ -753,6 +753,8 @@ public class AdminController {
                 courseData.put("section", section.getSectionNumber());
                 courseData.put("enrollmentStatus", enrollmentStatus); // Include enrollment status
                 courseData.put("enrollmentId", enrollment.getEnrollmentId()); // Include enrollment ID
+                courseData.put("courseId", course.getCourseId()); // Include course ID for lookups
+                courseData.put("offeredCourseId", offeredCourse.getOfferedCourseId()); // Include offered course ID
                 
                 if (gradeOpt.isPresent()) {
                     Grade grade = gradeOpt.get();

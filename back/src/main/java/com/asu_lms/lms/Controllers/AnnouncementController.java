@@ -175,9 +175,15 @@ public class AnnouncementController {
         return allAnnouncements.stream()
             .filter(announcement -> {
                 Map<String, String> attrs = eavService.getAnnouncementAttributes(announcement.getAnnouncementId());
+                String scopeType = attrs.getOrDefault("scope_type", "global");
                 String isActive = attrs.getOrDefault("is_active", "true");
                 String announcementType = attrs.getOrDefault("announcement_type", "all_users");
                 String expiresAtStr = attrs.get("expires_at");
+                
+                // Exclude course-specific announcements - they should only appear in course details
+                if ("course".equals(scopeType)) {
+                    return false;
+                }
                 
                 // Check if active
                 if (!"true".equalsIgnoreCase(isActive)) {

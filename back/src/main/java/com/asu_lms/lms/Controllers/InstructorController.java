@@ -2,6 +2,7 @@ package com.asu_lms.lms.Controllers;
 
 import com.asu_lms.lms.Entities.*;
 import com.asu_lms.lms.Repositories.*;
+import com.asu_lms.lms.Services.CourseGradeConfigService;
 import com.asu_lms.lms.Services.EAVService;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class InstructorController {
     private final EnrollmentRepository enrollmentRepository;
     private final GradeRepository gradeRepository;
     private final EAVService eavService;
+    private final CourseGradeConfigService gradeConfigService;
 
     public InstructorController(
             InstructorRepository instructorRepository,
@@ -42,7 +44,8 @@ public class InstructorController {
             UserRepository userRepository,
             EnrollmentRepository enrollmentRepository,
             GradeRepository gradeRepository,
-            EAVService eavService
+            EAVService eavService,
+            CourseGradeConfigService gradeConfigService
     ) {
         this.instructorRepository = instructorRepository;
         this.offeredCourseInstructorRepository = offeredCourseInstructorRepository;
@@ -57,6 +60,7 @@ public class InstructorController {
         this.enrollmentRepository = enrollmentRepository;
         this.gradeRepository = gradeRepository;
         this.eavService = eavService;
+        this.gradeConfigService = gradeConfigService;
     }
 
     @GetMapping("/{instructorId}/dashboard")
@@ -445,6 +449,29 @@ public class InstructorController {
                 return response;
             }
 
+            Enrollment enrollment = enrollmentOpt.get();
+            
+            // Get offered course ID from enrollment -> section -> offeredCourse
+            Optional<Section> sectionOpt = sectionRepository.findBySectionId(enrollment.getSectionId());
+            if (sectionOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Section not found");
+                return response;
+            }
+            
+            Integer offeredCourseId = sectionOpt.get().getOfferedCourseId();
+            
+            // Get grade component configuration for this course
+            Map<String, Object> configResponse = gradeConfigService.getGradeComponentConfig(offeredCourseId);
+            if (!"success".equals(configResponse.get("status"))) {
+                response.put("status", "error");
+                response.put("message", "Error getting grade component configuration");
+                return response;
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Double> configuredComponents = (Map<String, Double>) configResponse.get("components");
+
             Grade grade = gradeRepository.findByEnrollmentId(enrollmentId)
                     .orElseGet(() -> {
                         Grade g = new Grade();
@@ -453,31 +480,81 @@ public class InstructorController {
                         return g;
                     });
 
-            // Update grade attributes using EAV
-            if (payload.containsKey("midterm")) {
-                eavService.setGradeAttribute(grade, "midterm", convertToString(payload.get("midterm")));
+            // Map frontend field names to database attribute names
+            Map<String, String> fieldNameMap = new HashMap<>();
+            fieldNameMap.put("midterm", "midterm");
+            fieldNameMap.put("project", "project");
+            fieldNameMap.put("assignmentsTotal", "assignments_total");
+            fieldNameMap.put("quizzesTotal", "quizzes_total");
+            fieldNameMap.put("attendance", "attendance");
+            fieldNameMap.put("finalExamMark", "final_exam_mark");
+
+            // Get existing grade attributes first
+            Map<String, String> existingGradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
+            
+            // Calculate total marks and validate
+            double totalMarks = 0.0;
+            for (Map.Entry<String, String> entry : fieldNameMap.entrySet()) {
+                String frontendField = entry.getKey();
+                String dbAttribute = entry.getValue();
+                
+                // Check if this component is enabled in configuration
+                if (configuredComponents.containsKey(dbAttribute) && configuredComponents.get(dbAttribute) != null) {
+                    Object valueObj = payload.get(frontendField);
+                    String valueStr = null;
+                    
+                    // Use value from payload if present, otherwise use existing value
+                    if (valueObj != null) {
+                        valueStr = convertToString(valueObj);
+                    } else {
+                        valueStr = existingGradeAttributes.get(dbAttribute);
+                    }
+                    
+                    if (valueStr != null && !valueStr.trim().isEmpty()) {
+                        try {
+                            double value = Double.parseDouble(valueStr);
+                            
+                            // Update the grade attribute if it was in payload
+                            if (payload.containsKey(frontendField)) {
+                                eavService.setGradeAttribute(grade, dbAttribute, valueStr);
+                            }
+                            
+                            // Validate against max value
+                            Double maxValue = configuredComponents.get(dbAttribute);
+                            if (value > maxValue) {
+                                response.put("status", "error");
+                                response.put("message", String.format("%s value (%.2f) exceeds maximum (%.2f)", 
+                                    frontendField, value, maxValue));
+                                return response;
+                            }
+                            totalMarks += value;
+                        } catch (NumberFormatException e) {
+                            // Skip invalid numbers
+                        }
+                    }
+                }
             }
-            if (payload.containsKey("project")) {
-                eavService.setGradeAttribute(grade, "project", convertToString(payload.get("project")));
+
+            // Validate total doesn't exceed 100
+            double maxTotal = configuredComponents.values().stream()
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+            
+            if (totalMarks > 100.0) {
+                response.put("status", "error");
+                response.put("message", String.format("Total marks (%.2f) exceeds 100. Please adjust the grades.", totalMarks));
+                return response;
             }
-            if (payload.containsKey("assignmentsTotal")) {
-                eavService.setGradeAttribute(grade, "assignments_total", convertToString(payload.get("assignmentsTotal")));
-            }
-            if (payload.containsKey("quizzesTotal")) {
-                eavService.setGradeAttribute(grade, "quizzes_total", convertToString(payload.get("quizzesTotal")));
-            }
-            if (payload.containsKey("attendance")) {
-                eavService.setGradeAttribute(grade, "attendance", convertToString(payload.get("attendance")));
-            }
-            if (payload.containsKey("finalExamMark")) {
-                eavService.setGradeAttribute(grade, "final_exam_mark", convertToString(payload.get("finalExamMark")));
-            }
+
+            // Do NOT set finalLetterGrade here - it should be set manually via separate endpoint
+            // Only allow setting it explicitly if provided (for backward compatibility, but should use calculate endpoint)
             if (payload.containsKey("finalLetterGrade")) {
                 grade.setFinalLetterGrade((String) payload.get("finalLetterGrade"));
                 gradeRepository.save(grade);
             }
 
-            // Get all grade attributes
+            // Get all grade attributes to return
             Map<String, String> gradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
             Map<String, Object> gradeData = new HashMap<>();
             gradeData.put("midterm", gradeAttributes.get("midterm"));
@@ -487,12 +564,101 @@ public class InstructorController {
             gradeData.put("attendance", gradeAttributes.get("attendance"));
             gradeData.put("finalExamMark", gradeAttributes.get("final_exam_mark"));
             gradeData.put("finalLetterGrade", grade.getFinalLetterGrade());
+            gradeData.put("totalMarks", totalMarks);
+            gradeData.put("maxTotal", maxTotal);
 
             response.put("status", "success");
             response.put("data", gradeData);
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Error updating grade: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    /**
+     * Calculate and set final letter grade for a student
+     * POST /api/instructors/grades/{enrollmentId}/calculate-final-grade
+     */
+    @PostMapping("/grades/{enrollmentId}/calculate-final-grade")
+    public Map<String, Object> calculateFinalGrade(@PathVariable Integer enrollmentId) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Optional<Enrollment> enrollmentOpt = enrollmentRepository.findById(enrollmentId);
+            if (enrollmentOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Enrollment not found");
+                return response;
+            }
+
+            Enrollment enrollment = enrollmentOpt.get();
+            
+            // Get offered course ID
+            Optional<Section> sectionOpt = sectionRepository.findBySectionId(enrollment.getSectionId());
+            if (sectionOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Section not found");
+                return response;
+            }
+            
+            Integer offeredCourseId = sectionOpt.get().getOfferedCourseId();
+            
+            // Get grade component configuration
+            Map<String, Object> configResponse = gradeConfigService.getGradeComponentConfig(offeredCourseId);
+            if (!"success".equals(configResponse.get("status"))) {
+                response.put("status", "error");
+                response.put("message", "Error getting grade component configuration");
+                return response;
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Double> configuredComponents = (Map<String, Double>) configResponse.get("components");
+
+            // Get or create grade
+            Grade grade = gradeRepository.findByEnrollmentId(enrollmentId)
+                    .orElseGet(() -> {
+                        Grade g = new Grade();
+                        g.setEnrollmentId(enrollmentId);
+                        gradeRepository.save(g);
+                        return g;
+                    });
+
+            // Calculate total marks from grade attributes
+            Map<String, String> gradeAttributes = eavService.getGradeAttributes(grade.getGradeId());
+            double totalMarks = 0.0;
+            
+            for (Map.Entry<String, Double> configEntry : configuredComponents.entrySet()) {
+                String attributeName = configEntry.getKey();
+                if (configEntry.getValue() != null) { // Component is enabled
+                    String valueStr = gradeAttributes.get(attributeName);
+                    if (valueStr != null && !valueStr.trim().isEmpty()) {
+                        try {
+                            double value = Double.parseDouble(valueStr);
+                            totalMarks += value;
+                        } catch (NumberFormatException e) {
+                            // Skip invalid values
+                        }
+                    }
+                }
+            }
+
+            // Calculate final letter grade
+            String finalLetterGrade = gradeConfigService.calculateFinalLetterGrade(totalMarks);
+            
+            // Set final letter grade
+            grade.setFinalLetterGrade(finalLetterGrade);
+            gradeRepository.save(grade);
+
+            response.put("status", "success");
+            response.put("message", "Final grade calculated and saved");
+            response.put("totalMarks", totalMarks);
+            response.put("finalLetterGrade", finalLetterGrade);
+
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error calculating final grade: " + e.getMessage());
         }
 
         return response;

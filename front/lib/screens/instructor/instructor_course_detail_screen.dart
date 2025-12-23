@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/api_services.dart';
 import 'instructor_room_booking.dart';
+import 'instructor_course_management_screen.dart';
 
 class InstructorCourseDetailScreen extends StatefulWidget {
   final int instructorId;
@@ -98,12 +99,12 @@ class _InstructorCourseDetailScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              info['courseTitle']?.toString() ?? 'Course',
+              '${info['courseTitle']?.toString() ?? 'Course'} ${info['courseCode'] ?? ''}',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              '${info['courseCode'] ?? ''} • ${info['semester'] ?? ''}',
+              info['semester']?.toString() ?? '',
               style: const TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 12),
@@ -115,11 +116,31 @@ class _InstructorCourseDetailScreenState
                   'Credits',
                   info['credits']?.toString() ?? '0',
                 ),
-                _buildSummaryChip(
-                  'Department',
-                  info['departmentName']?.toString() ?? 'N/A',
-                ),
               ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => InstructorCourseManagementScreen(
+                        course: widget.course,
+                        instructorId: widget.instructorId,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings_applications),
+                label: const Text('Manage Course Materials, Announcements & Assignments'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
           ],
         ),
@@ -266,28 +287,58 @@ class _InstructorCourseDetailScreenState
     );
   }
 
-  void _openGradeEditor(Map<String, dynamic> student) {
+  void _openGradeEditor(Map<String, dynamic> student) async {
+    // Load grade configuration first
+    final offeredCourseId = widget.course['offeredCourseId'] as int?;
+    if (offeredCourseId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Course ID not found')),
+      );
+      return;
+    }
+
+    final configResponse = await _apiService.getGradeComponentConfig(offeredCourseId);
+    if (configResponse['status'] != 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(configResponse['message'] ?? 'Failed to load grade configuration')),
+      );
+      return;
+    }
+
+    final configuredComponents = Map<String, double?>.from(
+      configResponse['components'] ?? {},
+    );
+
     final grade = Map<String, dynamic>.from(student['grade'] ?? {});
-    final Map<String, TextEditingController> controllers = {
-      'midterm': TextEditingController(
-        text: _formatGradeValue(grade['midterm']),
-      ),
-      'project': TextEditingController(
-        text: _formatGradeValue(grade['project']),
-      ),
-      'assignmentsTotal': TextEditingController(
-        text: _formatGradeValue(grade['assignmentsTotal']),
-      ),
-      'quizzesTotal': TextEditingController(
-        text: _formatGradeValue(grade['quizzesTotal']),
-      ),
-      'attendance': TextEditingController(
-        text: _formatGradeValue(grade['attendance']),
-      ),
-      'finalExamMark': TextEditingController(
-        text: _formatGradeValue(grade['finalExamMark']),
-      ),
+    
+    // Map database attribute names to frontend field names
+    final Map<String, String> attributeToField = {
+      'midterm': 'midterm',
+      'project': 'project',
+      'assignments_total': 'assignmentsTotal',
+      'quizzes_total': 'quizzesTotal',
+      'attendance': 'attendance',
+      'final_exam_mark': 'finalExamMark',
+      'lab_grade': 'labGrade',
+      'presentation_grade': 'presentationGrade',
+      'participation': 'participation',
     };
+
+    final Map<String, TextEditingController> controllers = {};
+    final Map<String, double?> maxValues = {};
+
+    // Only add controllers for enabled components
+    configuredComponents.forEach((attrName, maxValue) {
+      if (maxValue != null) {
+        final fieldName = attributeToField[attrName] ?? attrName;
+        controllers[fieldName] = TextEditingController(
+          text: _formatGradeValue(grade[fieldName]),
+        );
+        maxValues[fieldName] = maxValue;
+      }
+    });
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -331,34 +382,97 @@ class _InstructorCourseDetailScreenState
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: entry.key,
+                      labelText: _formatFieldLabel(entry.key),
+                      hintText: maxValues[entry.key] != null
+                          ? 'Max: ${maxValues[entry.key]?.toStringAsFixed(1)}'
+                          : null,
                       border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _submitGradeUpdate(
-                      student['enrollmentId'] as int,
-                      controllers,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await _calculateFinalGrade(
+                          student['enrollmentId'] as int,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Calculate Final Grade'),
+                    ),
                   ),
-                  child: const Text('Save Grades'),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await _submitGradeUpdate(
+                          student['enrollmentId'] as int,
+                          controllers,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Save Grades'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatFieldLabel(String fieldName) {
+    final labels = {
+      'midterm': 'Midterm',
+      'project': 'Project',
+      'assignmentsTotal': 'Assignments Total',
+      'quizzesTotal': 'Quizzes Total',
+      'attendance': 'Attendance',
+      'finalExamMark': 'Final Exam Mark',
+      'labGrade': 'Lab Grade',
+      'presentationGrade': 'Presentation',
+      'participation': 'Participation',
+    };
+    return labels[fieldName] ?? fieldName;
+  }
+
+  Future<void> _calculateFinalGrade(int enrollmentId) async {
+    final response = await _apiService.calculateFinalGrade(enrollmentId);
+    if (mounted) {
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Final Grade: ${response['finalLetterGrade']} (Total: ${response['totalMarks']?.toStringAsFixed(1)}%)',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop();
+        _loadCourseDetail();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to calculate final grade'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _submitGradeUpdate(

@@ -486,6 +486,22 @@ public class CourseManagementController {
         return response;
     }
     
+    // Get all instructors (for course assignment)
+    @GetMapping("/instructors/all")
+    public Map<String, Object> getAllInstructors() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Map<String, Object>> instructors = courseManagementService.getAllInstructors();
+            response.put("status", "success");
+            response.put("instructors", instructors);
+            response.put("count", instructors.size());
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching instructors: " + e.getMessage());
+        }
+        return response;
+    }
+    
     // Get instructors for a specific department (filtered by department)
     @GetMapping("/departments/{departmentId}/instructors")
     public Map<String, Object> getInstructorsByDepartment(@PathVariable Integer departmentId) {
