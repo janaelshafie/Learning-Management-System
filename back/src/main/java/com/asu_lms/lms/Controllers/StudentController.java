@@ -147,12 +147,17 @@ public class StudentController {
             Set<Integer> allowedCourseIds = new HashSet<>(primaryCourseIds);
             allowedCourseIds.addAll(additionalCourseIds);
 
+            // Get ASU courses from DepartmentCourse table
             List<DepartmentCourse> asuDepartmentCourses = asuDepartmentId != null
                     ? departmentCourseRepository.findByDepartmentId(asuDepartmentId)
                     : Collections.emptyList();
             Set<Integer> asuCourseIds = asuDepartmentCourses.stream()
                     .map(DepartmentCourse::getCourseId)
                     .collect(Collectors.toSet());
+
+            // Also include courses where primary departmentCode is 'ASU'
+            List<Course> primaryAsuCourses = courseRepository.findByDepartmentCode("ASU");
+            primaryAsuCourses.forEach(c -> asuCourseIds.add(c.getCourseId()));
 
             // Build map of DepartmentCourse entries for course type lookup
             // Note: Primary department courses won't have DepartmentCourse entries, 
@@ -376,12 +381,15 @@ public class StudentController {
             boolean courseAvailableToDepartment = departmentCourseRepository
                     .existsByDepartmentIdAndCourseId(student.getDepartmentId(), offeredCourse.getCourseId());
             
-            // Method 3: Check if course is available as ASU course
+            // Method 3: Check if course is available as ASU course (via DepartmentCourse)
             Integer asuDepartmentId = getAsuDepartmentId();
             boolean courseIsAsu = asuDepartmentId != null && departmentCourseRepository
                     .existsByDepartmentIdAndCourseId(asuDepartmentId, offeredCourse.getCourseId());
+            
+            // Method 4: Check if course's primary department is ASU (all students can register for ASU courses)
+            boolean isPrimaryAsuCourse = "ASU".equals(course.getDepartmentCode());
 
-            if (!isPrimaryDepartment && !courseAvailableToDepartment && !courseIsAsu) {
+            if (!isPrimaryDepartment && !courseAvailableToDepartment && !courseIsAsu && !isPrimaryAsuCourse) {
                 response.put("status", "error");
                 response.put("message", "You are not eligible to register for this course.");
                 return response;

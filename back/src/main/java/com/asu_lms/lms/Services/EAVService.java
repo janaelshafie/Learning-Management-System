@@ -133,8 +133,12 @@ public class EAVService {
 
     @Transactional
     public void setAnnouncementAttribute(Announcement announcement, String attributeName, String value) {
+        // Create the attribute if it doesn't exist
         AnnouncementAttributes attribute = announcementAttributesRepository.findByAttributeName(attributeName)
-            .orElseThrow(() -> new RuntimeException("Announcement attribute not found: " + attributeName));
+            .orElseGet(() -> {
+                AnnouncementAttributes aa = new AnnouncementAttributes(attributeName, "text");
+                return announcementAttributesRepository.save(aa);
+            });
         
         Optional<AnnouncementAttributeValues> existing = announcementAttributeValuesRepository
             .findByAnnouncement_AnnouncementIdAndAttribute_AttributeName(announcement.getAnnouncementId(), attributeName);
