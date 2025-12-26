@@ -32,13 +32,18 @@ public class AuthService {
             User user = userOpt.get();
             // Check password using BCrypt verification
             if (passwordService.verifyPassword(password, user.getPasswordHash())) {
-                // Check account status
-                if ("active".equals(user.getAccountStatus())) {
-                    return user.getRole();
-                } else if ("pending".equals(user.getAccountStatus())) {
-                    return "pending";
-                } else if ("rejected".equals(user.getAccountStatus())) {
-                    return "rejected";
+                // Check account status using switch with a default case (no behavioral change)
+                String status = user.getAccountStatus();
+                switch (status) {
+                    case "active":
+                        return user.getRole();
+                    case "pending":
+                        return "pending";
+                    case "rejected":
+                        return "rejected";
+                    default:
+                        // Default added for clarity - same effect as falling through to return "invalid" below.
+                        return "invalid";
                 }
             }
         }
