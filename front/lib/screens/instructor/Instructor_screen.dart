@@ -36,6 +36,15 @@ class _InstructorScreenState extends State<InstructorScreen>
   List<Map<String, dynamic>> _pendingDrops = [];
   bool _isLoadingRequests = false;
 
+  // Messages from parents and students
+  List<Map<String, dynamic>> _inboxMessages = [];
+  List<Map<String, dynamic>> _sentMessages = [];
+  List<Map<String, dynamic>> _messageRecipients = [];
+  bool _isLoadingMessages = false;
+  bool _isLoadingRecipients = false;
+  int _unreadMessagesCount = 0;
+  int _messageTabIndex = 0; // 0=inbox, 1=sent, 2=compose
+
   final List<String> _daysOfWeek = const [
     'Monday',
     'Tuesday',
@@ -69,20 +78,24 @@ class _InstructorScreenState extends State<InstructorScreen>
   }
 
   Future<void> _loadInstructorData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       if (widget.userEmail == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No email provided. Please log in again.'),
-          ),
-        );
-        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No email provided. Please log in again.'),
+            ),
+          );
+          setState(() => _isLoading = false);
+        }
         return;
       }
 
       final userResponse = await _apiService.getUserByEmail(widget.userEmail!);
+      if (!mounted) return;
       if (userResponse['status'] != 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -101,12 +114,13 @@ class _InstructorScreenState extends State<InstructorScreen>
       try {
         if (_userData == null || _userData!['userId'] == null) {
           print('Error: User data or userId is missing');
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
           return;
         }
         final instructorData = await _apiService.getInstructorData(
           _userData!['userId'],
         );
+        if (!mounted) return;
         if (instructorData['status'] == 'success') {
           final data = instructorData['data'] ?? {};
           setState(() {
@@ -144,19 +158,104 @@ class _InstructorScreenState extends State<InstructorScreen>
         final announcementsList = await _apiService.getAnnouncementsForUserType(
           'instructors_only',
         );
-        _announcements = announcementsList.isNotEmpty ? announcementsList : [];
+        if (mounted) {
+          _announcements = announcementsList.isNotEmpty
+              ? announcementsList
+              : [];
+        }
       } catch (e) {
         // If announcements fail to load, continue with empty list
         print('Error loading announcements: $e');
         _announcements = [];
       }
 
-      setState(() => _isLoading = false);
+      // Load messages from parents
+      await _loadMessages();
+
+      if (mounted) setState(() => _isLoading = false);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
-      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMessages() async {
+    if (_userData == null || _userData!['userId'] == null) return;
+    if (!mounted) return;
+
+    setState(() => _isLoadingMessages = true);
+
+    try {
+      final response = await _apiService.getInbox(_userData!['userId']);
+      if (!mounted) return;
+      if (response['status'] == 'success') {
+        final messages = List<Map<String, dynamic>>.from(
+          response['messages'] ?? [],
+        );
+        _inboxMessages = messages;
+        _unreadMessagesCount = response['unreadCount'] ?? 0;
+      }
+    } catch (e) {
+      print('Error loading messages: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMessages = false);
+    }
+  }
+
+  Future<void> _loadSentMessages() async {
+    if (_userData == null || _userData!['userId'] == null) return;
+    if (!mounted) return;
+
+    try {
+      final response = await _apiService.getSentMessages(_userData!['userId']);
+      if (!mounted) return;
+      if (response['status'] == 'success') {
+        setState(() {
+          _sentMessages = List<Map<String, dynamic>>.from(
+            response['messages'] ?? [],
+          );
+        });
+      }
+    } catch (e) {
+      print('Error loading sent messages: $e');
+    }
+  }
+
+  Future<void> _loadMessageRecipients() async {
+    if (_userData == null || _userData!['userId'] == null) return;
+    if (!mounted) return;
+
+    setState(() => _isLoadingRecipients = true);
+
+    try {
+      final response = await _apiService.getInstructorRecipients(
+        _userData!['userId'],
+      );
+      if (!mounted) return;
+      if (response['status'] == 'success') {
+        setState(() {
+          _messageRecipients = List<Map<String, dynamic>>.from(
+            response['recipients'] ?? [],
+          );
+        });
+      }
+    } catch (e) {
+      print('Error loading recipients: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingRecipients = false);
+    }
+  }
+
+  Future<void> _markMessageAsRead(int messageId) async {
+    try {
+      await _apiService.markMessageAsRead(messageId);
+      _loadMessages();
+    } catch (e) {
+      // Silently fail
     }
   }
 
@@ -236,10 +335,19 @@ class _InstructorScreenState extends State<InstructorScreen>
                   _buildNavItem(1, 'Profile', Icons.person),
                   _buildNavItem(2, 'My Courses', Icons.menu_book),
                   _buildNavItem(3, 'Office Hours', Icons.schedule),
-                  _buildNavItem(6, 'Book Room', Icons.meeting_room),
-                  _buildNavItem(7, 'Room Schedule', Icons.event_note),
+                  _buildNavItem(6, 'Room Management', Icons.meeting_room),
+                  _buildNavItemWithBadge(
+                    8,
+                    'Messages',
+                    Icons.mail,
+                    _unreadMessagesCount,
+                  ),
                   if (_isProfessor)
-                    _buildNavItem(4, 'Registration Requests', Icons.pending_actions),
+                    _buildNavItem(
+                      4,
+                      'Registration Requests',
+                      Icons.pending_actions,
+                    ),
                   if (_isProfessor) _buildNavItem(5, 'Advisees', Icons.group),
                 ],
               ),
@@ -297,6 +405,87 @@ class _InstructorScreenState extends State<InstructorScreen>
     );
   }
 
+  Widget _buildNavItemWithBadge(
+    int index,
+    String title,
+    IconData icon,
+    int badgeCount,
+  ) {
+    final bool selected = _selectedIndex == index;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: selected ? Colors.white.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        leading: Stack(
+          children: [
+            Icon(icon, color: Colors.white),
+            if (badgeCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        title: _isSidebarExpanded
+            ? Row(
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white)),
+                  if (badgeCount > 0 && _isSidebarExpanded) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            : null,
+        onTap: () {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildMainContent() {
     switch (_selectedIndex) {
       case 0:
@@ -316,25 +505,14 @@ class _InstructorScreenState extends State<InstructorScreen>
       case 6:
         if (_userData?['userId'] != null) {
           final userId = _userData!['userId'];
-          return InstructorRoomBookingScreen(
-            userId: userId is int
-                ? userId
-                : int.tryParse(userId.toString()) ?? 0,
-            isEmbedded: true,
-          );
+          final userIdInt = userId is int
+              ? userId
+              : int.tryParse(userId.toString()) ?? 0;
+          return _buildRoomManagementSection(userIdInt);
         }
         return const Center(child: Text('User data not available'));
-      case 7:
-        if (_userData?['userId'] != null) {
-          final userId = _userData!['userId'];
-          return InstructorRoomScheduleScreen(
-            userId: userId is int
-                ? userId
-                : int.tryParse(userId.toString()) ?? 0,
-            isEmbedded: true,
-          );
-        }
-        return const Center(child: Text('User data not available'));
+      case 8:
+        return _buildMessagesSection();
       default:
         return _buildInstructorDashboard();
     }
@@ -388,6 +566,19 @@ class _InstructorScreenState extends State<InstructorScreen>
                   Colors.orange,
                 ),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildClickableKPICard(
+                  'UNREAD MESSAGES',
+                  '$_unreadMessagesCount',
+                  Colors.purple,
+                  () {
+                    setState(() {
+                      _selectedIndex = 8;
+                    });
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -432,6 +623,53 @@ class _InstructorScreenState extends State<InstructorScreen>
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildClickableKPICard(
+    String label,
+    String value,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white70,
+                  size: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -917,6 +1155,707 @@ class _InstructorScreenState extends State<InstructorScreen>
     );
   }
 
+  // ---------- ROOM MANAGEMENT ----------
+
+  Widget _buildRoomManagementSection(int userId) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: const Color(0xFF1E3A8A),
+            child: const TabBar(
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              tabs: [
+                Tab(icon: Icon(Icons.add_box), text: 'Book Room'),
+                Tab(icon: Icon(Icons.calendar_today), text: 'Room Schedule'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                InstructorRoomBookingScreen(userId: userId, isEmbedded: true),
+                InstructorRoomScheduleScreen(userId: userId, isEmbedded: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- MESSAGES ----------
+
+  Widget _buildMessagesSection() {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              const Icon(Icons.mail, size: 24, color: Color(0xFF1E3A8A)),
+              const SizedBox(width: 8),
+              const Text(
+                'Messages',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+              const Spacer(),
+              if (_unreadMessagesCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$_unreadMessagesCount unread',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // Tab buttons
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              _buildMessageTabButton(0, 'Inbox', Icons.inbox),
+              const SizedBox(width: 8),
+              _buildMessageTabButton(1, 'Sent', Icons.send),
+              const SizedBox(width: 8),
+              _buildMessageTabButton(2, 'Compose', Icons.edit),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Tab content
+        Expanded(child: _buildMessageTabContent()),
+      ],
+    );
+  }
+
+  Widget _buildMessageTabButton(int index, String label, IconData icon) {
+    final isSelected = _messageTabIndex == index;
+    return ElevatedButton.icon(
+      onPressed: () {
+        setState(() {
+          _messageTabIndex = index;
+        });
+        if (index == 0) _loadMessages();
+        if (index == 1) _loadSentMessages();
+        if (index == 2) _loadMessageRecipients();
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected
+            ? const Color(0xFF1E3A8A)
+            : Colors.grey[200],
+        foregroundColor: isSelected ? Colors.white : Colors.black87,
+        elevation: isSelected ? 2 : 0,
+      ),
+    );
+  }
+
+  Widget _buildMessageTabContent() {
+    switch (_messageTabIndex) {
+      case 0:
+        return _buildInboxTab();
+      case 1:
+        return _buildSentTab();
+      case 2:
+        return _buildComposeTab();
+      default:
+        return _buildInboxTab();
+    }
+  }
+
+  Widget _buildInboxTab() {
+    if (_isLoadingMessages) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_inboxMessages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Messages from students and parents will appear here',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: _inboxMessages.length,
+      itemBuilder: (context, index) =>
+          _buildMessageCard(_inboxMessages[index], isInbox: true),
+    );
+  }
+
+  Widget _buildSentTab() {
+    if (_sentMessages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.send, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No sent messages',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: _sentMessages.length,
+      itemBuilder: (context, index) =>
+          _buildSentMessageCard(_sentMessages[index]),
+    );
+  }
+
+  Widget _buildComposeTab() {
+    return _InstructorComposeMessage(
+      recipients: _messageRecipients,
+      isLoading: _isLoadingRecipients,
+      userId: _userData?['userId'] ?? 0,
+      onRefresh: _loadMessageRecipients,
+      onMessageSent: () {
+        setState(() {
+          _messageTabIndex = 1; // Switch to sent tab
+        });
+        _loadSentMessages();
+      },
+    );
+  }
+
+  Widget _buildSentMessageCard(Map<String, dynamic> message) {
+    final String recipientName =
+        message['recipientName']?.toString() ?? 'Unknown';
+    final String recipientEmail = message['recipientEmail']?.toString() ?? '';
+    final String content = message['content']?.toString() ?? '';
+    final String sentAt = message['sentAt']?.toString() ?? '';
+    final bool isRead = message['isRead'] ?? false;
+
+    String formattedDate = '';
+    if (sentAt.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(sentAt);
+        formattedDate =
+            '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        formattedDate = sentAt.split('T').first;
+      }
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.green.withOpacity(0.1),
+              child: Text(
+                recipientName.isNotEmpty ? recipientName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('To: ', style: TextStyle(color: Colors.grey)),
+                      Expanded(
+                        child: Text(
+                          recipientName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isRead)
+                        Icon(Icons.done_all, size: 16, color: Colors.green[600])
+                      else
+                        Icon(Icons.done, size: 16, color: Colors.grey[400]),
+                    ],
+                  ),
+                  if (recipientEmail.isNotEmpty)
+                    Text(
+                      recipientEmail,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey[800]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageCard(
+    Map<String, dynamic> message, {
+    bool isInbox = true,
+  }) {
+    final bool isRead = message['isRead'] ?? false;
+    final String senderName = message['senderName']?.toString() ?? 'Unknown';
+    final String senderEmail = message['senderEmail']?.toString() ?? '';
+    final String content = message['content']?.toString() ?? '';
+    final String sentAt = message['sentAt']?.toString() ?? '';
+    final int messageId = message['messageId'] ?? 0;
+
+    // Format the date
+    String formattedDate = '';
+    if (sentAt.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(sentAt);
+        formattedDate =
+            '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        formattedDate = sentAt.split('T').first;
+      }
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: isRead ? 1 : 3,
+      color: isRead ? Colors.white : Colors.blue.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isRead
+            ? BorderSide.none
+            : const BorderSide(color: Color(0xFF1E3A8A), width: 1),
+      ),
+      child: InkWell(
+        onTap: () {
+          _showMessageDetailDialog(message);
+          if (!isRead) {
+            _markMessageAsRead(messageId);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.1),
+                child: Text(
+                  senderName.isNotEmpty ? senderName[0].toUpperCase() : 'U',
+                  style: const TextStyle(
+                    color: Color(0xFF1E3A8A),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            senderName,
+                            style: TextStyle(
+                              fontWeight: isRead
+                                  ? FontWeight.w500
+                                  : FontWeight.bold,
+                              fontSize: 16,
+                              color: const Color(0xFF1E3A8A),
+                            ),
+                          ),
+                        ),
+                        if (!isRead)
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (senderEmail.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        senderEmail,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      content,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey[800]),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          formattedDate,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => _showMessageDetailDialog(message),
+                          child: const Text('View Details'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMessageDetailDialog(Map<String, dynamic> message) {
+    final String senderName = message['senderName']?.toString() ?? 'Unknown';
+    final String senderEmail = message['senderEmail']?.toString() ?? '';
+    final String content = message['content']?.toString() ?? '';
+    final String sentAt = message['sentAt']?.toString() ?? '';
+    final bool isRead = message['isRead'] ?? false;
+    final int messageId = message['messageId'] ?? 0;
+
+    // Format the date
+    String formattedDate = '';
+    if (sentAt.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(sentAt);
+        formattedDate =
+            '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        formattedDate = sentAt;
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.1),
+              child: Text(
+                senderName.isNotEmpty ? senderName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Color(0xFF1E3A8A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    senderName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (senderEmail.isNotEmpty)
+                    Text(
+                      senderEmail,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.5,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(content, style: const TextStyle(fontSize: 15)),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sent: $formattedDate',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                  ],
+                ),
+                if (isRead && message['readAt'] != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.done_all, size: 16, color: Colors.green[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Read',
+                        style: TextStyle(
+                          color: Colors.green[600],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showReplyDialog(message);
+            },
+            icon: const Icon(Icons.reply),
+            label: const Text('Reply'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Mark as read if not already
+    if (!isRead) {
+      _markMessageAsRead(messageId);
+    }
+  }
+
+  void _showReplyDialog(Map<String, dynamic> originalMessage) {
+    final String senderName =
+        originalMessage['senderName']?.toString() ?? 'Unknown';
+    final int senderId = originalMessage['senderUserId'] ?? 0;
+    final TextEditingController replyController = TextEditingController();
+    bool isSending = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.reply, color: Color(0xFF1E3A8A)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Reply to $senderName',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.5,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Original message:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        originalMessage['content']?.toString() ?? '',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: replyController,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: 'Your reply',
+                    hintText: 'Type your reply here...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSending ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSending
+                  ? null
+                  : () async {
+                      if (replyController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter a message'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSending = true);
+
+                      try {
+                        final response = await _apiService.sendMessage(
+                          _userData!['userId'],
+                          senderId,
+                          replyController.text.trim(),
+                        );
+
+                        if (response['status'] == 'success') {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Reply sent successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _loadSentMessages();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                response['message'] ?? 'Error sending reply',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          setDialogState(() => isSending = false);
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        setDialogState(() => isSending = false);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+              ),
+              child: isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Send Reply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ---------- ALL COURSES ----------
 
   Widget _buildAllCourses() {
@@ -1081,6 +2020,7 @@ class _InstructorScreenState extends State<InstructorScreen>
     if (!_isProfessor || _userData == null || _userData!['userId'] == null) {
       return;
     }
+    if (!mounted) return;
 
     setState(() => _isLoadingRequests = true);
 
@@ -1088,6 +2028,7 @@ class _InstructorScreenState extends State<InstructorScreen>
       final response = await _apiService.getPendingRequests(
         _userData!['userId'],
       );
+      if (!mounted) return;
       if (response['status'] == 'success') {
         final data = response['data'] ?? {};
         setState(() {
@@ -1108,11 +2049,13 @@ class _InstructorScreenState extends State<InstructorScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading requests: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading requests: $e')));
+      }
     } finally {
-      setState(() => _isLoadingRequests = false);
+      if (mounted) setState(() => _isLoadingRequests = false);
     }
   }
 
@@ -1120,6 +2063,7 @@ class _InstructorScreenState extends State<InstructorScreen>
     if (!_isProfessor || _userData == null || _userData!['userId'] == null) {
       return;
     }
+    if (!mounted) return;
 
     try {
       final response = await _apiService.approveRequest(
@@ -1127,6 +2071,7 @@ class _InstructorScreenState extends State<InstructorScreen>
         enrollmentId,
         action,
       );
+      if (!mounted) return;
 
       if (response['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1151,9 +2096,11 @@ class _InstructorScreenState extends State<InstructorScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -1526,13 +2473,16 @@ class _InstructorScreenState extends State<InstructorScreen>
 
   Future<void> _saveOfficeHours() async {
     if (_userData == null || _userData!['userId'] == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User data missing. Please log in again.'),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User data missing. Please log in again.'),
+          ),
+        );
+      }
       return;
     }
+    if (!mounted) return;
 
     // Always send the current slots (even if empty, to clear office hours)
     // Filter out any invalid slots (missing required fields) before sending
@@ -1563,6 +2513,7 @@ class _InstructorScreenState extends State<InstructorScreen>
         instructorId,
         slotsPayload,
       );
+      if (!mounted) return;
 
       if (result['status'] == 'success') {
         final updated =
@@ -1596,6 +2547,7 @@ class _InstructorScreenState extends State<InstructorScreen>
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error updating office hours: $e'),
@@ -1737,5 +2689,266 @@ class _InstructorScreenState extends State<InstructorScreen>
     } catch (_) {
       return 'Unknown Date';
     }
+  }
+}
+
+// Compose message widget for instructors
+class _InstructorComposeMessage extends StatefulWidget {
+  final List<Map<String, dynamic>> recipients;
+  final bool isLoading;
+  final int userId;
+  final VoidCallback onRefresh;
+  final VoidCallback onMessageSent;
+
+  const _InstructorComposeMessage({
+    required this.recipients,
+    required this.isLoading,
+    required this.userId,
+    required this.onRefresh,
+    required this.onMessageSent,
+  });
+
+  @override
+  State<_InstructorComposeMessage> createState() =>
+      _InstructorComposeMessageState();
+}
+
+class _InstructorComposeMessageState extends State<_InstructorComposeMessage> {
+  final ApiService _apiService = ApiService();
+  final TextEditingController _messageController = TextEditingController();
+  int? _selectedRecipientId;
+  bool _isSending = false;
+  String _filterType = 'all'; // all, student, parent, advisee
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.recipients.isEmpty && !widget.isLoading) {
+      widget.onRefresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _filteredRecipients {
+    if (_filterType == 'all') return widget.recipients;
+    return widget.recipients.where((r) {
+      final type = r['type']?.toString().toLowerCase() ?? '';
+      final role = r['role']?.toString().toLowerCase() ?? '';
+      switch (_filterType) {
+        case 'student':
+          return role == 'student';
+        case 'parent':
+          return role == 'parent';
+        case 'advisee':
+          return type == 'advisee';
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  Future<void> _sendMessage() async {
+    if (_selectedRecipientId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a recipient')),
+      );
+      return;
+    }
+
+    if (_messageController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a message')));
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    try {
+      final response = await _apiService.sendMessage(
+        widget.userId,
+        _selectedRecipientId!,
+        _messageController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message sent successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _messageController.clear();
+        setState(() {
+          _selectedRecipientId = null;
+        });
+        widget.onMessageSent();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Error sending message'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (widget.recipients.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No recipients available',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You can message students in your courses and their parents',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: widget.onRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Filter buttons
+          Wrap(
+            spacing: 8,
+            children: [
+              FilterChip(
+                label: const Text('All'),
+                selected: _filterType == 'all',
+                onSelected: (_) => setState(() => _filterType = 'all'),
+              ),
+              FilterChip(
+                label: const Text('Advisees'),
+                selected: _filterType == 'advisee',
+                onSelected: (_) => setState(() => _filterType = 'advisee'),
+              ),
+              FilterChip(
+                label: const Text('Students'),
+                selected: _filterType == 'student',
+                onSelected: (_) => setState(() => _filterType = 'student'),
+              ),
+              FilterChip(
+                label: const Text('Parents'),
+                selected: _filterType == 'parent',
+                onSelected: (_) => setState(() => _filterType = 'parent'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Recipient dropdown
+          DropdownButtonFormField<int?>(
+            decoration: InputDecoration(
+              labelText: 'Select Recipient',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              prefixIcon: const Icon(Icons.person),
+            ),
+            value: _selectedRecipientId,
+            isExpanded: true,
+            items: _filteredRecipients.map((recipient) {
+              final name = recipient['name']?.toString() ?? 'Unknown';
+              final type = recipient['type']?.toString() ?? '';
+              final courseCode = recipient['courseCode']?.toString() ?? '';
+              String subtitle = type;
+              if (courseCode.isNotEmpty) {
+                subtitle = '$type - $courseCode';
+              }
+              return DropdownMenuItem<int?>(
+                value: recipient['userId'],
+                child: Text(
+                  '$name ($subtitle)',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedRecipientId = value;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          // Message text field
+          TextField(
+            controller: _messageController,
+            maxLines: 8,
+            decoration: InputDecoration(
+              labelText: 'Message',
+              hintText: 'Type your message here...',
+              alignLabelWithHint: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Send button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSending ? null : _sendMessage,
+              icon: _isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.send),
+              label: Text(_isSending ? 'Sending...' : 'Send Message'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 }

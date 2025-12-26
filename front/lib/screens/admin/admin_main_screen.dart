@@ -11,6 +11,7 @@ import 'admin_semester_management.dart';
 import 'admin_announcements.dart';
 import 'admin_room_management.dart';
 import 'admin_room_reservations_approval.dart';
+import 'admin_advisor_management.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -70,6 +71,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         return AdminRoomManagementScreen(userId: currentUserId);
       case 8:
         return AdminRoomReservationsApprovalScreen(userId: currentUserId);
+      case 9:
+        return const AdminAdvisorManagement();
       default:
         return const AdminDashboardOverview();
     }
@@ -162,6 +165,11 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                         title: 'Room Reservations',
                         index: 8,
                       ),
+                      _buildNavItem(
+                        icon: Icons.supervisor_account,
+                        title: 'Advisor Management',
+                        index: 9,
+                      ),
                     ],
                   ),
                 ),
@@ -227,9 +235,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             ),
           ),
           // Main Content
-          Expanded(
-            child: _getPage(),
-          ),
+          Expanded(child: _getPage()),
         ],
       ),
     );
@@ -276,4 +282,3 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 }
-

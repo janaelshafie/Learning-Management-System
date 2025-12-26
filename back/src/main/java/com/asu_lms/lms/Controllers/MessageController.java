@@ -87,6 +87,150 @@ public class MessageController {
     }
 
     /**
+     * Get available recipients for an instructor (advisees + students in their courses + parents of advisees)
+     */
+    @GetMapping("/instructor/{instructorId}/recipients")
+    public Map<String, Object> getInstructorRecipients(@PathVariable Integer instructorId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(instructorId);
+            if (instructorOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Instructor not found");
+                return response;
+            }
+            
+            Instructor instructor = instructorOpt.get();
+            List<Map<String, Object>> recipients = new ArrayList<>();
+            Set<Integer> addedUserIds = new HashSet<>();
+            
+            // Add advisees if professor
+            if ("professor".equalsIgnoreCase(instructor.getInstructorType())) {
+                List<Student> advisees = studentRepository.findByAdvisorId(instructorId);
+                for (Student advisee : advisees) {
+                    if (addedUserIds.contains(advisee.getStudentId())) continue;
+                    
+                    Optional<User> studentUserOpt = userRepository.findById(advisee.getStudentId());
+                    if (studentUserOpt.isEmpty()) continue;
+                    
+                    User studentUser = studentUserOpt.get();
+                    Map<String, Object> recipient = new HashMap<>();
+                    recipient.put("userId", studentUser.getUserId());
+                    recipient.put("name", studentUser.getName());
+                    recipient.put("email", studentUser.getEmail());
+                    recipient.put("role", "student");
+                    recipient.put("type", "Advisee");
+                    recipient.put("studentUid", advisee.getStudentUid());
+                    recipients.add(recipient);
+                    addedUserIds.add(studentUser.getUserId());
+                    
+                    // Also add parent of advisee if exists
+                    if (advisee.getParentUserId() != null && !addedUserIds.contains(advisee.getParentUserId())) {
+                        Optional<User> parentUserOpt = userRepository.findById(advisee.getParentUserId());
+                        if (parentUserOpt.isPresent()) {
+                            User parentUser = parentUserOpt.get();
+                            Map<String, Object> parentRecipient = new HashMap<>();
+                            parentRecipient.put("userId", parentUser.getUserId());
+                            parentRecipient.put("name", parentUser.getName());
+                            parentRecipient.put("email", parentUser.getEmail());
+                            parentRecipient.put("role", "parent");
+                            parentRecipient.put("type", "Parent of " + studentUser.getName());
+                            parentRecipient.put("studentName", studentUser.getName());
+                            recipients.add(parentRecipient);
+                            addedUserIds.add(parentUser.getUserId());
+                        }
+                    }
+                }
+            }
+            
+            // Get current semester
+            LocalDate today = LocalDate.now();
+            Semester currentSemester = findCurrentSemester(today);
+            
+            if (currentSemester != null) {
+                // Get courses taught by this instructor
+                List<OfferedCourseInstructor> assignments = offeredCourseInstructorRepository.findByInstructorId(instructorId);
+                
+                for (OfferedCourseInstructor assignment : assignments) {
+                    Optional<OfferedCourse> offeredCourseOpt = offeredCourseRepository.findByOfferedCourseId(assignment.getOfferedCourseId());
+                    if (offeredCourseOpt.isEmpty()) continue;
+                    
+                    OfferedCourse offeredCourse = offeredCourseOpt.get();
+                    if (!offeredCourse.getSemesterId().equals(currentSemester.getSemesterId())) continue;
+                    
+                    Optional<Course> courseOpt = courseRepository.findById(offeredCourse.getCourseId());
+                    String courseCode = courseOpt.map(Course::getCourseCode).orElse("");
+                    String courseName = courseOpt.map(Course::getTitle).orElse("Unknown");
+                    
+                    // Get all sections for this offered course
+                    List<Section> sections = sectionRepository.findByOfferedCourseId(offeredCourse.getOfferedCourseId());
+                    
+                    for (Section section : sections) {
+                        // Get students enrolled in this section
+                        List<Enrollment> enrollments = enrollmentRepository.findBySectionId(section.getSectionId());
+                        
+                        for (Enrollment enrollment : enrollments) {
+                            String status = eavService.getEnrollmentStatus(enrollment.getEnrollmentId());
+                            if (!"approved".equals(status) && !"pending".equals(status) && !"drop_pending".equals(status)) {
+                                continue;
+                            }
+                            
+                            if (addedUserIds.contains(enrollment.getStudentId())) continue;
+                            
+                            Optional<Student> studentOpt = studentRepository.findByStudentId(enrollment.getStudentId());
+                            if (studentOpt.isEmpty()) continue;
+                            Student student = studentOpt.get();
+                            
+                            Optional<User> studentUserOpt = userRepository.findById(enrollment.getStudentId());
+                            if (studentUserOpt.isEmpty()) continue;
+                            
+                            User studentUser = studentUserOpt.get();
+                            Map<String, Object> recipient = new HashMap<>();
+                            recipient.put("userId", studentUser.getUserId());
+                            recipient.put("name", studentUser.getName());
+                            recipient.put("email", studentUser.getEmail());
+                            recipient.put("role", "student");
+                            recipient.put("type", "Student");
+                            recipient.put("courseCode", courseCode);
+                            recipient.put("courseName", courseName);
+                            recipient.put("studentUid", student.getStudentUid());
+                            recipients.add(recipient);
+                            addedUserIds.add(studentUser.getUserId());
+                            
+                            // Also add parent if exists
+                            if (student.getParentUserId() != null && !addedUserIds.contains(student.getParentUserId())) {
+                                Optional<User> parentUserOpt = userRepository.findById(student.getParentUserId());
+                                if (parentUserOpt.isPresent()) {
+                                    User parentUser = parentUserOpt.get();
+                                    Map<String, Object> parentRecipient = new HashMap<>();
+                                    parentRecipient.put("userId", parentUser.getUserId());
+                                    parentRecipient.put("name", parentUser.getName());
+                                    parentRecipient.put("email", parentUser.getEmail());
+                                    parentRecipient.put("role", "parent");
+                                    parentRecipient.put("type", "Parent of " + studentUser.getName());
+                                    parentRecipient.put("studentName", studentUser.getName());
+                                    recipients.add(parentRecipient);
+                                    addedUserIds.add(parentUser.getUserId());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            response.put("status", "success");
+            response.put("recipients", recipients);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching recipients: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
      * Get available recipients for a student (advisor + instructors for current semester courses)
      */
     @GetMapping("/student/{studentId}/recipients")

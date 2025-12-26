@@ -19,7 +19,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late TabController _tabController;
-  
+
   List<Map<String, dynamic>> _recipients = [];
   List<Map<String, dynamic>> _inboxMessages = [];
   List<Map<String, dynamic>> _sentMessages = [];
@@ -27,7 +27,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
   bool _isLoadingInbox = true;
   bool _isLoadingSent = true;
   int _unreadCount = 0;
-  
+
   int? _selectedRecipientId;
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false;
@@ -39,7 +39,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     _loadRecipients();
     _loadInbox();
     _loadSentMessages();
-    
+
     _tabController.addListener(() {
       if (_tabController.index == 0) {
         _loadInbox();
@@ -57,15 +57,19 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
   }
 
   Future<void> _loadRecipients() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingRecipients = true;
     });
 
     try {
       final response = await _apiService.getStudentRecipients(widget.studentId);
+      if (!mounted) return;
       if (response['status'] == 'success') {
         setState(() {
-          _recipients = List<Map<String, dynamic>>.from(response['recipients'] ?? []);
+          _recipients = List<Map<String, dynamic>>.from(
+            response['recipients'] ?? [],
+          );
           _isLoadingRecipients = false;
         });
       } else {
@@ -74,7 +78,9 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response['message'] ?? 'Error loading recipients')),
+            SnackBar(
+              content: Text(response['message'] ?? 'Error loading recipients'),
+            ),
           );
         }
       }
@@ -83,23 +89,27 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         _isLoadingRecipients = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   Future<void> _loadInbox() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingInbox = true;
     });
 
     try {
       final response = await _apiService.getInbox(widget.userId);
+      if (!mounted) return;
       if (response['status'] == 'success') {
         setState(() {
-          _inboxMessages = List<Map<String, dynamic>>.from(response['messages'] ?? []);
+          _inboxMessages = List<Map<String, dynamic>>.from(
+            response['messages'] ?? [],
+          );
           _unreadCount = response['unreadCount'] ?? 0;
           _isLoadingInbox = false;
         });
@@ -109,6 +119,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingInbox = false;
       });
@@ -116,15 +127,19 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
   }
 
   Future<void> _loadSentMessages() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingSent = true;
     });
 
     try {
       final response = await _apiService.getSentMessages(widget.userId);
+      if (!mounted) return;
       if (response['status'] == 'success') {
         setState(() {
-          _sentMessages = List<Map<String, dynamic>>.from(response['messages'] ?? []);
+          _sentMessages = List<Map<String, dynamic>>.from(
+            response['messages'] ?? [],
+          );
           _isLoadingSent = false;
         });
       } else {
@@ -133,6 +148,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingSent = false;
       });
@@ -148,9 +164,9 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     }
 
     if (_messageController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a message')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a message')));
       return;
     }
 
@@ -165,6 +181,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         _messageController.text.trim(),
       );
 
+      if (!mounted) return;
       if (response['status'] == 'success') {
         _messageController.clear();
         _loadSentMessages();
@@ -173,17 +190,22 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Error sending message')),
+          SnackBar(
+            content: Text(response['message'] ?? 'Error sending message'),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      setState(() {
-        _isSending = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
@@ -212,7 +234,10 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
                   if (_unreadCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(10),
@@ -237,11 +262,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildInboxTab(),
-          _buildSentTab(),
-          _buildComposeTab(),
-        ],
+        children: [_buildInboxTab(), _buildSentTab(), _buildComposeTab()],
       ),
     );
   }
@@ -252,9 +273,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     }
 
     if (_inboxMessages.isEmpty) {
-      return const Center(
-        child: Text('No messages in inbox'),
-      );
+      return const Center(child: Text('No messages in inbox'));
     }
 
     return ListView.builder(
@@ -263,15 +282,13 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
       itemBuilder: (context, index) {
         final message = _inboxMessages[index];
         final isRead = message['isRead'] ?? false;
-        
+
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
           color: isRead ? null : Colors.blue.shade50,
           child: ListTile(
             leading: CircleAvatar(
-              child: Text(
-                (message['senderName'] ?? 'U')[0].toUpperCase(),
-              ),
+              child: Text((message['senderName'] ?? 'U')[0].toUpperCase()),
             ),
             title: Text(
               message['senderName'] ?? 'Unknown',
@@ -290,10 +307,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
                 const SizedBox(height: 4),
                 Text(
                   message['sentAt'] ?? '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -318,9 +332,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     }
 
     if (_sentMessages.isEmpty) {
-      return const Center(
-        child: Text('No sent messages'),
-      );
+      return const Center(child: Text('No sent messages'));
     }
 
     return ListView.builder(
@@ -328,14 +340,12 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
       itemCount: _sentMessages.length,
       itemBuilder: (context, index) {
         final message = _sentMessages[index];
-        
+
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
           child: ListTile(
             leading: CircleAvatar(
-              child: Text(
-                (message['recipientName'] ?? 'U')[0].toUpperCase(),
-              ),
+              child: Text((message['recipientName'] ?? 'U')[0].toUpperCase()),
             ),
             title: Text(message['recipientName'] ?? 'Unknown'),
             subtitle: Column(
@@ -351,10 +361,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
                   children: [
                     Text(
                       message['sentAt'] ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     if (message['isRead'] == true) ...[
                       const SizedBox(width: 8),
@@ -389,10 +396,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
         children: [
           const Text(
             'Select Recipient',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           if (_isLoadingRecipients)
@@ -412,12 +416,12 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
                 final type = recipient['type'] ?? '';
                 final courseCode = recipient['courseCode'] ?? '';
                 final courseName = recipient['courseName'] ?? '';
-                
+
                 String displayName = '$name ($type)';
                 if (courseCode.isNotEmpty) {
                   displayName += ' - $courseCode: $courseName';
                 }
-                
+
                 return DropdownMenuItem<int>(
                   value: userId,
                   child: Text(displayName),
@@ -432,10 +436,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
           const SizedBox(height: 24),
           const Text(
             'Message',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -464,10 +465,7 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
                   )
                 : const Text(
                     'Send Message',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
           ),
         ],
@@ -475,7 +473,10 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
     );
   }
 
-  void _showMessageDialog(Map<String, dynamic> message, {required bool isSender}) {
+  void _showMessageDialog(
+    Map<String, dynamic> message, {
+    required bool isSender,
+  }) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -498,18 +499,12 @@ class _StudentMessagingScreenState extends State<StudentMessagingScreen>
               const SizedBox(height: 16),
               Text(
                 'Sent: ${message['sentAt'] ?? ''}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               if (message['readAt'] != null)
                 Text(
                   'Read: ${message['readAt']}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
             ],
           ),

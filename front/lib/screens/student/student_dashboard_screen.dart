@@ -57,8 +57,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
   bool _isSubmittingRegistrations = false;
   bool _isDroppingCourses = false;
   bool _showAvailableCourses = false;
-  final TextEditingController _courseSearchController =
-      TextEditingController();
+  final TextEditingController _courseSearchController = TextEditingController();
   String _courseSearchQuery = '';
 
   @override
@@ -218,14 +217,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       final response = await _apiService.getStudentRegistrationData(studentId);
 
       if (response['status'] == 'success') {
-        final data =
-            Map<String, dynamic>.from(response['data'] ?? <String, dynamic>{});
-        final List<Map<String, dynamic>> parsedCourses =
-            _parseCourseList(data['courses']);
-        List<Map<String, dynamic>> parsedAsuCourses =
-            _parseCourseList(data['asuCourses']);
-        List<Map<String, dynamic>> parsedDepartmentCourses =
-            _parseCourseList(data['departmentCourses']);
+        final data = Map<String, dynamic>.from(
+          response['data'] ?? <String, dynamic>{},
+        );
+        final List<Map<String, dynamic>> parsedCourses = _parseCourseList(
+          data['courses'],
+        );
+        List<Map<String, dynamic>> parsedAsuCourses = _parseCourseList(
+          data['asuCourses'],
+        );
+        List<Map<String, dynamic>> parsedDepartmentCourses = _parseCourseList(
+          data['departmentCourses'],
+        );
 
         if (parsedAsuCourses.isEmpty && parsedDepartmentCourses.isEmpty) {
           for (final course in parsedCourses) {
@@ -249,14 +252,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             _availableRegistrationCourses = parsedCourses;
             _asuRegistrationCourses = parsedAsuCourses;
             _departmentRegistrationCourses = parsedDepartmentCourses;
-            _registeredCoursesForSemester =
-                _parseCourseList(data['registeredCourses']);
+            _registeredCoursesForSemester = _parseCourseList(
+              data['registeredCourses'],
+            );
             _registrationStatusMessage = response['message']?.toString();
             _selectedSectionsByCourse = {};
             _selectedDropEnrollmentIds.clear();
           });
         }
-        } else {
+      } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -291,11 +295,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     return null;
   }
 
-  void _toggleSectionSelection(
-    int courseId,
-    int sectionId,
-    bool isSelected,
-  ) {
+  void _toggleSectionSelection(int courseId, int sectionId, bool isSelected) {
     if (!_registrationOpen) return;
     setState(() {
       if (isSelected) {
@@ -335,7 +335,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
 
     if (_selectedSectionsByCourse.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one course to register.')),
+        const SnackBar(
+          content: Text('Select at least one course to register.'),
+        ),
       );
       return;
     }
@@ -349,13 +351,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
 
     try {
       for (final sectionId in _selectedSectionsByCourse.values) {
-        final result =
-            await _apiService.registerStudentForSection(studentId, sectionId);
+        final result = await _apiService.registerStudentForSection(
+          studentId,
+          sectionId,
+        );
         if (result['status'] == 'success') {
           successCount++;
         } else {
           errors.add(
-            result['message']?.toString() ?? 'Unable to register for section $sectionId',
+            result['message']?.toString() ??
+                'Unable to register for section $sectionId',
           );
         }
       }
@@ -371,21 +376,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errors.first),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errors.first)));
       }
 
-    setState(() {
+      setState(() {
         _selectedSectionsByCourse.clear();
       });
       await _loadRegistrationData();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error registering courses: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error registering courses: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -449,9 +452,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errors.first)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errors.first)));
       }
 
       setState(() {
@@ -459,9 +462,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       });
       await _loadRegistrationData();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error dropping courses: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error dropping courses: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -477,11 +480,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
 
     final now = DateTime.now();
 
-      for (var course in _courses) {
+    for (var course in _courses) {
       bool isCurrentSemester = false;
 
-      final String? semesterStartStr =
-          course['semesterStartDate']?.toString();
+      final String? semesterStartStr = course['semesterStartDate']?.toString();
       final String? semesterEndStr = course['semesterEndDate']?.toString();
       final DateTime? semesterStartDate = _parseDate(semesterStartStr);
       final DateTime? semesterEndDate = _parseDate(semesterEndStr);
@@ -497,7 +499,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       } else {
         // Fallback: treat courses without grades as ongoing.
         String? grade = course['grade']?.toString();
-        isCurrentSemester = grade == null ||
+        isCurrentSemester =
+            grade == null ||
             grade.isEmpty ||
             grade == '-' ||
             grade == 'I' ||
@@ -676,10 +679,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       case 5:
         return _buildServices();
       case 6:
-        if (_userData?['userId'] != null && _userData?['studentId'] != null) {
+        final studentId = _getStudentId();
+        if (_userData?['userId'] != null && studentId != null) {
           return StudentMessagingScreen(
             userId: _userData!['userId'],
-            studentId: _userData!['studentId'],
+            studentId: studentId,
           );
         }
         return const Center(child: Text('User data not available'));
@@ -914,8 +918,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     final bool isWide = MediaQuery.of(context).size.width > 1100;
     final String fullName = _userData?['name']?.toString() ?? 'Student';
     final String studentUid = _userData?['studentUid']?.toString() ?? 'N/A';
-    final String major =
-        _departmentName.isNotEmpty ? _departmentName : 'No Department';
+    final String major = _departmentName.isNotEmpty
+        ? _departmentName
+        : 'No Department';
     final String status =
         _userData?['accountStatus']?.toString().toUpperCase() ?? 'ACTIVE';
     final String officialEmail =
@@ -928,8 +933,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     final String gradDate =
         _userData?['expectedGraduation']?.toString() ?? 'N/A';
     final List<Map<String, dynamic>> scheduleCourses = _getScheduleCourses();
-    final List<Map<String, dynamic>> latestAnnouncements =
-        _announcements.take(3).map((a) => Map<String, dynamic>.from(a)).toList();
+    final List<Map<String, dynamic>> latestAnnouncements = _announcements
+        .take(3)
+        .map((a) => Map<String, dynamic>.from(a))
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -963,8 +970,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             status: status,
           ),
           const SizedBox(height: 24),
-          if (_pendingProfileChanges.isNotEmpty)
-            _buildPendingChangesBanner(),
+          if (_pendingProfileChanges.isNotEmpty) _buildPendingChangesBanner(),
           if (isWide)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,33 +1033,33 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
 
   Widget _buildPendingChangesBanner() {
     return Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 24),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
         borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.pending_actions, color: Colors.orange[700]),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pending_actions, color: Colors.orange[700]),
               const SizedBox(width: 12),
-                      Text(
-                        'Profile Changes Pending Approval',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
+              Text(
+                'Profile Changes Pending Approval',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
             'You have ${_pendingProfileChanges.length} change(s) waiting for admin approval. Updates will appear once processed.',
             style: TextStyle(color: Colors.orange[700]),
           ),
@@ -1088,11 +1094,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           CircleAvatar(
             radius: 50,
             backgroundColor: const Color(0xFF1E3A8A).withOpacity(0.1),
-            child: const Icon(
-              Icons.person,
-              size: 48,
-              color: Color(0xFF1E3A8A),
-            ),
+            child: const Icon(Icons.person, size: 48, color: Color(0xFF1E3A8A)),
           ),
           const SizedBox(width: 24),
           Expanded(
@@ -1155,9 +1157,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                     _buildMetricChip(
                       label: 'Credits',
                       value: '$_completedCredits',
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1178,17 +1180,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
         children: [
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
           ),
         ],
       ),
@@ -1204,21 +1200,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          children: [
             const Text(
               'Contact Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildInfoRow(Icons.email, 'Official Email', officialEmail),
-            _buildInfoRow(Icons.alternate_email, 'Personal Email', personalEmail),
+            _buildInfoRow(
+              Icons.alternate_email,
+              'Personal Email',
+              personalEmail,
+            ),
             _buildInfoRow(Icons.phone, 'Phone', phone),
             _buildInfoRow(Icons.location_on, 'Current Address', address),
           ],
@@ -1240,10 +1237,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
                 ),
                 Text(
                   value,
@@ -1254,9 +1248,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                 ),
               ],
             ),
-                  ),
-                ],
-              ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1273,10 +1267,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
               children: [
                 const Text(
                   'Current Semester Schedule',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 Container(
@@ -1292,10 +1283,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                     _currentCourses.isEmpty
                         ? 'Fall 2025'
                         : (_currentCourses.first['semester']?.toString() ??
-                            'Current'),
-            ),
-          ),
-        ],
+                              'Current'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             ...courses.map(_buildScheduleRow),
@@ -1307,10 +1298,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             const SizedBox(height: 8),
             const Text(
               'Status legend: Approved = confirmed in your record. Pending = registration submitted and awaiting advisor approval. Drop Requested = drop request submitted and awaiting advisor approval.',
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.black54, fontSize: 12),
             ),
           ],
         ),
@@ -1319,13 +1307,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
   }
 
   Widget _buildScheduleRow(Map<String, dynamic> course) {
-    final String code = course['code']?.toString() ??
-        course['courseCode']?.toString() ??
-        '---';
+    final String code =
+        course['code']?.toString() ?? course['courseCode']?.toString() ?? '---';
     final String title =
         course['name']?.toString() ?? course['courseTitle']?.toString() ?? '';
-    final String credits =
-        course['credits'] != null ? course['credits'].toString() : '0';
+    final String credits = course['credits'] != null
+        ? course['credits'].toString()
+        : '0';
     final String schedule = _formatScheduleText(course);
     final String status = _deriveCourseStatus(course);
 
@@ -1333,16 +1321,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE2E8F0)),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Row(
         children: [
           Expanded(
             child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
                   code,
                   style: const TextStyle(
@@ -1350,10 +1336,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                     fontSize: 16,
                   ),
                 ),
-                Text(
-                  title,
-                  style: const TextStyle(color: Colors.black54),
-                ),
+                Text(title, style: const TextStyle(color: Colors.black54)),
               ],
             ),
           ),
@@ -1427,10 +1410,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           children: [
             const Text(
               'Academic Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildInfoRow(Icons.school, 'Advisor', advisorName),
@@ -1446,7 +1426,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                   ),
                 ),
               ),
-            _buildInfoRow(Icons.calendar_month, 'Enrollment Date', enrollmentDate),
+            _buildInfoRow(
+              Icons.calendar_month,
+              'Enrollment Date',
+              enrollmentDate,
+            ),
             _buildInfoRow(Icons.flag, 'Expected Graduation', gradDate),
           ],
         ),
@@ -1465,10 +1449,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           children: [
             const Text(
               'Messages & Notices',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             if (announcements.isEmpty)
@@ -1947,27 +1928,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           SizedBox(
             width: double.infinity,
             child: Card(
-            elevation: 4,
-            child: Column(
-              children: [
-                TabBar(
-                  controller: _tabController,
-                  labelColor: const Color(0xFF1E3A8A),
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF1E3A8A),
-                  tabs: const [
-                    Tab(text: 'Course Registration'),
-                    Tab(text: 'Fees'),
-                  ],
-                ),
-                SizedBox(
-                    height: 500,
-                  child: TabBarView(
+              elevation: 4,
+              child: Column(
+                children: [
+                  TabBar(
                     controller: _tabController,
-                    children: [_buildCourseRegistration(), _buildFees()],
+                    labelColor: const Color(0xFF1E3A8A),
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: const Color(0xFF1E3A8A),
+                    tabs: const [
+                      Tab(text: 'Course Registration'),
+                      Tab(text: 'Fees'),
+                    ],
                   ),
-                ),
-              ],
+                  SizedBox(
+                    height: 500,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [_buildCourseRegistration(), _buildFees()],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1985,17 +1966,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-      child: Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-        children: [
+            children: [
               Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
               const SizedBox(height: 16),
-          const Text(
+              const Text(
                 'No active semester right now.',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+              ),
               const SizedBox(height: 8),
-          const Text(
+              const Text(
                 'You will be notified when the next semester becomes available for registration.',
                 textAlign: TextAlign.center,
               ),
@@ -2034,7 +2015,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                   : Icons.add_circle_outline,
             ),
             label: Text(
-              _showAvailableCourses ? 'Hide Register Courses' : 'Register Courses',
+              _showAvailableCourses
+                  ? 'Hide Register Courses'
+                  : 'Register Courses',
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _registrationOpen
@@ -2060,10 +2043,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     final bool isOpen = _registrationOpen;
     final String semesterName =
         _currentSemesterInfo?['name']?.toString() ?? 'Current Semester';
-    final String startDate =
-        _formatDate(_currentSemesterInfo?['startDate']?.toString());
-    final String endDate =
-        _formatDate(_currentSemesterInfo?['endDate']?.toString());
+    final String startDate = _formatDate(
+      _currentSemesterInfo?['startDate']?.toString(),
+    );
+    final String endDate = _formatDate(
+      _currentSemesterInfo?['endDate']?.toString(),
+    );
 
     return Container(
       width: double.infinity,
@@ -2143,9 +2128,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             ? 'Register Selected ($selectedCount)'
             : 'Select courses to register',
       ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 48),
       ),
     );
@@ -2175,16 +2160,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           children: [
             const Text(
               'My Registered Courses',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
             if (_registrationOpen)
               ElevatedButton.icon(
-                onPressed: (_selectedDropEnrollmentIds.isEmpty ||
-                        _isDroppingCourses)
+                onPressed:
+                    (_selectedDropEnrollmentIds.isEmpty || _isDroppingCourses)
                     ? null
                     : _submitSelectedDrops,
                 icon: _isDroppingCourses
@@ -2197,15 +2179,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                         ),
                       )
                     : const Icon(Icons.remove_circle_outline),
-                label: Text(_selectedDropEnrollmentIds.isEmpty
-                    ? 'Select courses to drop'
-                    : 'Drop Selected (${_selectedDropEnrollmentIds.length})'),
+                label: Text(
+                  _selectedDropEnrollmentIds.isEmpty
+                      ? 'Select courses to drop'
+                      : 'Drop Selected (${_selectedDropEnrollmentIds.length})',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
-            ),
-          ),
-        ],
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         if (_registeredCoursesForSemester.isEmpty)
@@ -2260,9 +2244,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
             hintText: 'Search by course code or name...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -2290,10 +2272,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           if (filteredAsu.isNotEmpty) ...[
             const Text(
               'ASU University Requirements',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             ...filteredAsu.map(_buildRegistrationCourseCard),
@@ -2302,10 +2281,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           if (filteredDept.isNotEmpty) ...[
             const Text(
               'Department Courses',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             ...filteredDept.map(_buildRegistrationCourseCard),
@@ -2320,15 +2296,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
   Widget _buildRegistrationCourseCard(Map<String, dynamic> course) {
     final List<dynamic> sectionsDynamic = course['sections'] ?? [];
     final List<Map<String, dynamic>> sections = sectionsDynamic
-        .map((section) =>
-            Map<String, dynamic>.from(section as Map<dynamic, dynamic>))
+        .map(
+          (section) =>
+              Map<String, dynamic>.from(section as Map<dynamic, dynamic>),
+        )
         .toList();
 
     final bool alreadyRegistered = course['alreadyRegistered'] == true;
     final int courseId = (course['courseId'] as num).toInt();
 
-    final bool isAlreadySelected =
-        _selectedSectionsByCourse.containsKey(courseId);
+    final bool isAlreadySelected = _selectedSectionsByCourse.containsKey(
+      courseId,
+    );
 
     return Card(
       color: alreadyRegistered || isAlreadySelected
@@ -2364,8 +2343,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(20),
@@ -2388,9 +2369,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                 if (course['courseType'] != null)
                   Chip(
                     avatar: const Icon(Icons.category, size: 16),
-                    label: Text(
-                      (course['courseType'] as String).toUpperCase(),
-                    ),
+                    label: Text((course['courseType'] as String).toUpperCase()),
                   ),
                 if (alreadyRegistered)
                   const Chip(
@@ -2444,7 +2423,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     final int sectionId = (section['sectionId'] as num).toInt();
     final int courseId = (course['courseId'] as num).toInt();
 
-    final bool canRegister = _registrationOpen &&
+    final bool canRegister =
+        _registrationOpen &&
         !isFull &&
         !studentEnrolled &&
         !alreadyRegisteredForCourse;
@@ -2472,9 +2452,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
               children: [
                 Text(
                   'Section ${section['sectionNumber'] ?? ''}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -2493,8 +2471,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                       studentEnrolled
                           ? 'Already registered in this section.'
                           : alreadyRegisteredForCourse
-                              ? 'You are already registered in another section.'
-                              : 'Section is full.',
+                          ? 'You are already registered in another section.'
+                          : 'Section is full.',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.redAccent,
@@ -2509,10 +2487,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             value: isSelected,
             onChanged: canRegister
                 ? (value) => _toggleSectionSelection(
-                      courseId,
-                      sectionId,
-                      value ?? false,
-                    )
+                    courseId,
+                    sectionId,
+                    value ?? false,
+                  )
                 : null,
           ),
         ],
@@ -2524,8 +2502,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     final String? enrollmentStatus = course['enrollmentStatus']?.toString();
     final bool isPending = enrollmentStatus == 'pending';
     final bool isDropPending = enrollmentStatus == 'drop_pending';
-    final bool isApproved = enrollmentStatus == 'approved' || enrollmentStatus == null;
-    
+    final bool isApproved =
+        enrollmentStatus == 'approved' || enrollmentStatus == null;
+
     // Only allow dropping approved enrollments (not pending or drop_pending)
     final bool canDrop = _registrationOpen && isApproved;
     final int enrollmentId = (course['enrollmentId'] as num).toInt();
@@ -2554,10 +2533,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                       ),
                       if (isPending || isDropPending)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: isPending 
-                                ? Colors.orange[100] 
+                            color: isPending
+                                ? Colors.orange[100]
                                 : Colors.red[100],
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2566,8 +2548,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isPending 
-                                  ? Colors.orange[800] 
+                              color: isPending
+                                  ? Colors.orange[800]
                                   : Colors.red[800],
                             ),
                           ),
@@ -2621,7 +2603,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
                 value: isSelected,
                 onChanged: canDrop
                     ? (value) =>
-                        _toggleDropSelection(enrollmentId, value ?? false)
+                          _toggleDropSelection(enrollmentId, value ?? false)
                     : null,
               ),
           ],
@@ -2660,104 +2642,368 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
         return 'Drop Requested';
       }
     }
-    
+
     // Fallback to explicit status field
     final String? explicitStatus = course['status']?.toString();
     if (explicitStatus != null && explicitStatus.isNotEmpty) {
       return explicitStatus;
     }
-    
+
     // Check grade for completed courses
     final String? grade = course['grade']?.toString();
-    if (grade != null &&
-        grade.isNotEmpty &&
-        grade != 'N/A' &&
-        grade != '-') {
+    if (grade != null && grade.isNotEmpty && grade != 'N/A' && grade != '-') {
       return 'Approved';
     }
     return 'Pending';
   }
 
   Widget _buildFees() {
-    return Padding(
+    const double costPerCreditHour = 2500.0; // EGP per credit hour
+
+    // Calculate current semester fees from registered courses
+    int currentSemesterCredits = 0;
+    for (var course in _registeredCoursesForSemester) {
+      final credits = course['credits'];
+      if (credits != null) {
+        if (credits is int) {
+          currentSemesterCredits += credits;
+        } else if (credits is num) {
+          currentSemesterCredits += credits.toInt();
+        } else {
+          currentSemesterCredits += int.tryParse(credits.toString()) ?? 0;
+        }
+      }
+    }
+    // Also add current courses if not in registered courses
+    for (var course in _currentCourses) {
+      final credits = course['credits'];
+      if (credits != null) {
+        if (credits is int) {
+          currentSemesterCredits += credits;
+        } else if (credits is num) {
+          currentSemesterCredits += credits.toInt();
+        } else {
+          currentSemesterCredits += int.tryParse(credits.toString()) ?? 0;
+        }
+      }
+    }
+    double currentSemesterFees = currentSemesterCredits * costPerCreditHour;
+
+    // Group past courses by semester
+    Map<String, List<Map<String, dynamic>>> coursesBySemester = {};
+    for (var course in _academicRecords) {
+      final semester = course['semester']?.toString() ?? 'Unknown Semester';
+      if (!coursesBySemester.containsKey(semester)) {
+        coursesBySemester[semester] = [];
+      }
+      coursesBySemester[semester]!.add(course);
+    }
+
+    // Sort semesters (most recent first)
+    List<String> sortedSemesters = coursesBySemester.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Fees Information',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          // Payment Notice
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment Information',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'All fees must be paid at the university\'s financial office. Please bring your student ID.',
+                        style: TextStyle(color: Colors.blue.shade700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
+          // Fee Rate Info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.monetization_on, color: Colors.green.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Fee Rate: ${costPerCreditHour.toStringAsFixed(0)} EGP per credit hour',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Current Semester Fees
+          const Text(
+            'Current Semester Fees',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
+            elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Tuition Fees'),
-                      Text(
-                        '\$2,500',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                  if (_registeredCoursesForSemester.isEmpty &&
+                      _currentCourses.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'No courses registered for current semester',
+                        style: TextStyle(color: Colors.grey),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Registration Fees'),
-                      Text(
-                        '\$100',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    )
+                  else ...[
+                    // List current courses
+                    ...(_registeredCoursesForSemester.isNotEmpty
+                            ? _registeredCoursesForSemester
+                            : _currentCourses)
+                        .map((course) {
+                          final courseName =
+                              course['courseTitle']?.toString() ??
+                              course['courseName']?.toString() ??
+                              course['name']?.toString() ??
+                              'Unknown Course';
+                          final courseCode =
+                              course['courseCode']?.toString() ?? '';
+                          final credits = course['credits'] ?? 0;
+                          final creditNum = credits is int
+                              ? credits
+                              : (credits is num
+                                    ? credits.toInt()
+                                    : int.tryParse(credits.toString()) ?? 0);
+                          final courseFee = creditNum * costPerCreditHour;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        courseName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        '$courseCode • $creditNum credit${creditNum == 1 ? '' : 's'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${courseFee.toStringAsFixed(0)} EGP',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '$currentSemesterCredits credit${currentSemesterCredits == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      Text(
-                        '\$2,600',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment feature coming soon!'),
+                        Text(
+                          '${currentSemesterFees.toStringAsFixed(0)} EGP',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Pay Now'),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 24),
+
+          // Past Semesters Fees
+          if (sortedSemesters.isNotEmpty) ...[
+            const Text(
+              'Past Semesters Fees',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...sortedSemesters.map((semester) {
+              final courses = coursesBySemester[semester]!;
+              int semesterCredits = 0;
+              for (var course in courses) {
+                final credits = course['credits'];
+                if (credits != null) {
+                  if (credits is int) {
+                    semesterCredits += credits;
+                  } else if (credits is num) {
+                    semesterCredits += credits.toInt();
+                  } else {
+                    semesterCredits += int.tryParse(credits.toString()) ?? 0;
+                  }
+                }
+              }
+              double semesterFees = semesterCredits * costPerCreditHour;
+
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ExpansionTile(
+                  title: Text(
+                    semester,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${courses.length} course${courses.length == 1 ? '' : 's'} • $semesterCredits credits',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${semesterFees.toStringAsFixed(0)} EGP',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.expand_more),
+                    ],
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: courses.map((course) {
+                          final courseName =
+                              course['courseName']?.toString() ??
+                              course['name']?.toString() ??
+                              'Unknown Course';
+                          final courseCode =
+                              course['courseCode']?.toString() ?? '';
+                          final credits = course['credits'] ?? 0;
+                          final creditNum = credits is int
+                              ? credits
+                              : (credits is num
+                                    ? credits.toInt()
+                                    : int.tryParse(credits.toString()) ?? 0);
+                          final courseFee = creditNum * costPerCreditHour;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(courseName),
+                                      Text(
+                                        '$courseCode • $creditNum credit${creditNum == 1 ? '' : 's'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${courseFee.toStringAsFixed(0)} EGP',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         ],
       ),
     );

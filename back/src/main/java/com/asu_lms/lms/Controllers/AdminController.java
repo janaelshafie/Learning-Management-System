@@ -1336,4 +1336,314 @@ public class AdminController {
         
         return response;
     }
+
+    // ==================== ADVISOR MANAGEMENT ====================
+
+    /**
+     * Get all students with their advisor information
+     */
+    @GetMapping("/students-advisors")
+    public Map<String, Object> getStudentsWithAdvisors() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<User> studentUsers = userRepository.findByRole("student");
+            List<Map<String, Object>> studentsData = new ArrayList<>();
+            
+            for (User user : studentUsers) {
+                Optional<Student> studentOpt = studentRepository.findByStudentId(user.getUserId());
+                if (studentOpt.isEmpty()) continue;
+                
+                Student student = studentOpt.get();
+                Map<String, Object> studentData = new HashMap<>();
+                studentData.put("userId", user.getUserId());
+                studentData.put("name", user.getName());
+                studentData.put("email", user.getEmail());
+                studentData.put("studentUid", student.getStudentUid());
+                studentData.put("departmentId", student.getDepartmentId());
+                
+                // Get department name
+                if (student.getDepartmentId() != null) {
+                    departmentRepository.findById(student.getDepartmentId()).ifPresent(dept -> {
+                        studentData.put("departmentName", dept.getName());
+                    });
+                } else {
+                    studentData.put("departmentName", "No Department");
+                }
+                
+                // Get advisor info
+                studentData.put("advisorId", student.getAdvisorId());
+                if (student.getAdvisorId() != null) {
+                    userRepository.findById(student.getAdvisorId()).ifPresent(advisor -> {
+                        studentData.put("advisorName", advisor.getName());
+                        studentData.put("advisorEmail", advisor.getEmail());
+                    });
+                } else {
+                    studentData.put("advisorName", null);
+                    studentData.put("advisorEmail", null);
+                }
+                
+                studentsData.add(studentData);
+            }
+            
+            response.put("status", "success");
+            response.put("students", studentsData);
+            response.put("count", studentsData.size());
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching students: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Assign an advisor to a single student
+     */
+    @PostMapping("/assign-advisor")
+    public Map<String, Object> assignAdvisor(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Integer studentId = parseInteger(request.get("studentId"));
+            Integer advisorId = parseInteger(request.get("advisorId"));
+            
+            if (studentId == null) {
+                response.put("status", "error");
+                response.put("message", "Student ID is required");
+                return response;
+            }
+            
+            Optional<Student> studentOpt = studentRepository.findByStudentId(studentId);
+            if (studentOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Student not found");
+                return response;
+            }
+            
+            // Validate advisor exists and is an instructor (if provided)
+            if (advisorId != null) {
+                Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(advisorId);
+                if (instructorOpt.isEmpty()) {
+                    response.put("status", "error");
+                    response.put("message", "Advisor (instructor) not found");
+                    return response;
+                }
+            }
+            
+            Student student = studentOpt.get();
+            student.setAdvisorId(advisorId);
+            studentRepository.save(student);
+            
+            String advisorName = "None";
+            if (advisorId != null) {
+                Optional<User> advisorUserOpt = userRepository.findById(advisorId);
+                if (advisorUserOpt.isPresent()) {
+                    advisorName = advisorUserOpt.get().getName();
+                }
+            }
+            
+            response.put("status", "success");
+            response.put("message", "Advisor assigned successfully");
+            response.put("advisorName", advisorName);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error assigning advisor: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Assign an advisor to multiple students (bulk assignment)
+     */
+    @PostMapping("/assign-advisor-bulk")
+    public Map<String, Object> assignAdvisorBulk(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Integer advisorId = parseInteger(request.get("advisorId"));
+            
+            @SuppressWarnings("unchecked")
+            List<Integer> studentIds = (List<Integer>) request.get("studentIds");
+            
+            if (studentIds == null || studentIds.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "At least one student ID is required");
+                return response;
+            }
+            
+            // Validate advisor exists and is an instructor (if provided)
+            if (advisorId != null) {
+                Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(advisorId);
+                if (instructorOpt.isEmpty()) {
+                    response.put("status", "error");
+                    response.put("message", "Advisor (instructor) not found");
+                    return response;
+                }
+            }
+            
+            int successCount = 0;
+            int failCount = 0;
+            
+            for (Object studentIdObj : studentIds) {
+                Integer studentId = parseInteger(studentIdObj);
+                if (studentId == null) {
+                    failCount++;
+                    continue;
+                }
+                
+                Optional<Student> studentOpt = studentRepository.findByStudentId(studentId);
+                if (studentOpt.isPresent()) {
+                    Student student = studentOpt.get();
+                    student.setAdvisorId(advisorId);
+                    studentRepository.save(student);
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            }
+            
+            response.put("status", "success");
+            response.put("message", "Advisor assigned to " + successCount + " student(s)" + 
+                (failCount > 0 ? ", " + failCount + " failed" : ""));
+            response.put("successCount", successCount);
+            response.put("failCount", failCount);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error assigning advisor: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Assign an advisor to all students in a department
+     */
+    @PostMapping("/assign-advisor-by-department")
+    public Map<String, Object> assignAdvisorByDepartment(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Integer advisorId = parseInteger(request.get("advisorId"));
+            Integer departmentId = parseInteger(request.get("departmentId"));
+            
+            if (departmentId == null) {
+                response.put("status", "error");
+                response.put("message", "Department ID is required");
+                return response;
+            }
+            
+            // Validate department exists
+            Optional<Department> deptOpt = departmentRepository.findById(departmentId);
+            if (deptOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Department not found");
+                return response;
+            }
+            
+            // Validate advisor exists and is an instructor (if provided)
+            if (advisorId != null) {
+                Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(advisorId);
+                if (instructorOpt.isEmpty()) {
+                    response.put("status", "error");
+                    response.put("message", "Advisor (instructor) not found");
+                    return response;
+                }
+            }
+            
+            // Find all students in this department
+            List<Student> students = studentRepository.findByDepartmentId(departmentId);
+            
+            int successCount = 0;
+            for (Student student : students) {
+                student.setAdvisorId(advisorId);
+                studentRepository.save(student);
+                successCount++;
+            }
+            
+            String deptName = deptOpt.get().getName();
+            response.put("status", "success");
+            response.put("message", "Advisor assigned to " + successCount + " student(s) in " + deptName);
+            response.put("successCount", successCount);
+            response.put("departmentName", deptName);
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error assigning advisor: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get all instructors who can be advisors
+     */
+    @GetMapping("/advisors-list")
+    public Map<String, Object> getAdvisorsList() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<User> instructorUsers = userRepository.findByRole("instructor");
+            List<Map<String, Object>> advisorsData = new ArrayList<>();
+            
+            for (User user : instructorUsers) {
+                Optional<Instructor> instructorOpt = instructorRepository.findByInstructorId(user.getUserId());
+                if (instructorOpt.isEmpty()) continue;
+                
+                Instructor instructor = instructorOpt.get();
+                Map<String, Object> advisorData = new HashMap<>();
+                advisorData.put("userId", user.getUserId());
+                advisorData.put("name", user.getName());
+                advisorData.put("email", user.getEmail());
+                advisorData.put("instructorType", instructor.getInstructorType());
+                advisorData.put("departmentId", instructor.getDepartmentId());
+                
+                // Get department name
+                if (instructor.getDepartmentId() != null) {
+                    departmentRepository.findById(instructor.getDepartmentId()).ifPresent(dept -> {
+                        advisorData.put("departmentName", dept.getName());
+                    });
+                } else {
+                    advisorData.put("departmentName", "No Department");
+                }
+                
+                // Count advisees
+                List<Student> advisees = studentRepository.findByAdvisorId(user.getUserId());
+                advisorData.put("adviseeCount", advisees.size());
+                
+                advisorsData.add(advisorData);
+            }
+            
+            response.put("status", "success");
+            response.put("advisors", advisorsData);
+            response.put("count", advisorsData.size());
+            
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Error fetching advisors: " + e.getMessage());
+        }
+        
+        return response;
+    }
+
+    // Helper method to parse Integer from Object
+    private Integer parseInteger(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Integer) return (Integer) obj;
+        if (obj instanceof String) {
+            try {
+                return Integer.parseInt((String) obj);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        return null;
+    }
 }

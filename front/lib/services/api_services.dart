@@ -888,14 +888,14 @@ class ApiService {
     String? title,
   }) async {
     final url = Uri.parse('http://localhost:8080/api/course/materials/upload');
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
-      
+
       // Add file from path
       var file = await http.MultipartFile.fromPath('file', filePath);
       request.files.add(file);
-      
+
       // Add form fields
       request.fields['offeredCourseId'] = offeredCourseId.toString();
       if (instructorId != null) {
@@ -904,10 +904,10 @@ class ApiService {
       if (title != null && title.isNotEmpty) {
         request.fields['title'] = title;
       }
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -917,10 +917,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
@@ -933,10 +930,10 @@ class ApiService {
     String? title,
   }) async {
     final url = Uri.parse('http://localhost:8080/api/course/materials/upload');
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
-      
+
       // Add file from bytes
       var file = http.MultipartFile.fromBytes(
         'file',
@@ -944,7 +941,7 @@ class ApiService {
         filename: fileName,
       );
       request.files.add(file);
-      
+
       // Add form fields
       request.fields['offeredCourseId'] = offeredCourseId.toString();
       if (instructorId != null) {
@@ -953,10 +950,10 @@ class ApiService {
       if (title != null && title.isNotEmpty) {
         request.fields['title'] = title;
       }
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -966,10 +963,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
@@ -989,10 +983,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error deleting material: $e',
-      };
+      return {'status': 'error', 'message': 'Error deleting material: $e'};
     }
   }
 
@@ -1021,7 +1012,9 @@ class ApiService {
     required String content,
     String? priority,
   }) async {
-    final url = Uri.parse('http://localhost:8080/api/course/announcements/create');
+    final url = Uri.parse(
+      'http://localhost:8080/api/course/announcements/create',
+    );
     try {
       final response = await http.post(
         url,
@@ -1037,21 +1030,17 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {
-          'status': 'error',
-          'message': 'Failed: ${response.statusCode}',
-        };
+        return {'status': 'error', 'message': 'Failed: ${response.statusCode}'};
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error creating announcement: $e',
-      };
+      return {'status': 'error', 'message': 'Error creating announcement: $e'};
     }
   }
 
   // Delete course announcement
-  Future<Map<String, dynamic>> deleteCourseAnnouncement(int announcementId) async {
+  Future<Map<String, dynamic>> deleteCourseAnnouncement(
+    int announcementId,
+  ) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/announcements/$announcementId',
     );
@@ -1066,10 +1055,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error deleting announcement: $e',
-      };
+      return {'status': 'error', 'message': 'Error deleting announcement: $e'};
     }
   }
 
@@ -1082,7 +1068,9 @@ class ApiService {
     int? instructorId,
     double? maxGrade,
   }) async {
-    final url = Uri.parse('http://localhost:8080/api/course/assignments/create');
+    final url = Uri.parse(
+      'http://localhost:8080/api/course/assignments/create',
+    );
     try {
       final response = await http.post(
         url,
@@ -1099,16 +1087,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {
-          'status': 'error',
-          'message': 'Failed: ${response.statusCode}',
-        };
+        return {'status': 'error', 'message': 'Failed: ${response.statusCode}'};
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error creating assignment: $e',
-      };
+      return {'status': 'error', 'message': 'Error creating assignment: $e'};
     }
   }
 
@@ -1147,10 +1129,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error deleting assignment: $e',
-      };
+      return {'status': 'error', 'message': 'Error deleting assignment: $e'};
     }
   }
 
@@ -1180,16 +1159,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {
-          'status': 'error',
-          'message': 'Failed: ${response.statusCode}',
-        };
+        return {'status': 'error', 'message': 'Failed: ${response.statusCode}'};
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error creating quiz: $e',
-      };
+      return {'status': 'error', 'message': 'Error creating quiz: $e'};
     }
   }
 
@@ -1214,9 +1187,7 @@ class ApiService {
 
   // Delete quiz
   Future<Map<String, dynamic>> deleteQuiz(int quizId) async {
-    final url = Uri.parse(
-      'http://localhost:8080/api/course/quizzes/$quizId',
-    );
+    final url = Uri.parse('http://localhost:8080/api/course/quizzes/$quizId');
     try {
       final response = await http.delete(url);
       if (response.statusCode == 200) {
@@ -1228,10 +1199,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error deleting quiz: $e',
-      };
+      return {'status': 'error', 'message': 'Error deleting quiz: $e'};
     }
   }
 
@@ -1764,7 +1732,9 @@ class ApiService {
   }
 
   // Grade Component Configuration
-  Future<Map<String, dynamic>> getGradeComponentConfig(int offeredCourseId) async {
+  Future<Map<String, dynamic>> getGradeComponentConfig(
+    int offeredCourseId,
+  ) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/grade-config/$offeredCourseId',
     );
@@ -1974,6 +1944,25 @@ class ApiService {
   Future<Map<String, dynamic>> getStudentRecipients(int studentId) async {
     final url = Uri.parse(
       'http://localhost:8080/api/message/student/$studentId/recipients',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getInstructorRecipients(int instructorId) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/message/instructor/$instructorId/recipients',
     );
     try {
       final response = await http.get(url);
@@ -2448,7 +2437,8 @@ class ApiService {
     int? questionOrder,
     double? maxMarks,
     List<String>? options, // For MCQ
-    dynamic correctAnswer, // For MCQ: index (int), For TRUE_FALSE/SHORT_TEXT: string
+    dynamic
+    correctAnswer, // For MCQ: index (int), For TRUE_FALSE/SHORT_TEXT: string
   }) async {
     final url = Uri.parse('http://localhost:8080/api/questions/create');
     try {
@@ -2728,15 +2718,15 @@ class ApiService {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/question-file/upload',
     );
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
       var file = await http.MultipartFile.fromPath('file', filePath);
       request.files.add(file);
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -2746,10 +2736,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
@@ -2762,7 +2749,7 @@ class ApiService {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/question-file/upload',
     );
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
       var file = http.MultipartFile.fromBytes(
@@ -2771,10 +2758,10 @@ class ApiService {
         filename: fileName,
       );
       request.files.add(file);
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -2784,15 +2771,14 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
   /// Get question file info for an assignment
-  Future<Map<String, dynamic>> getAssignmentQuestionFileInfo(int assignmentId) async {
+  Future<Map<String, dynamic>> getAssignmentQuestionFileInfo(
+    int assignmentId,
+  ) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/question-file',
     );
@@ -2820,7 +2806,9 @@ class ApiService {
   }
 
   /// Delete question file for an assignment
-  Future<Map<String, dynamic>> deleteAssignmentQuestionFile(int assignmentId) async {
+  Future<Map<String, dynamic>> deleteAssignmentQuestionFile(
+    int assignmentId,
+  ) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/question-file',
     );
@@ -2848,16 +2836,16 @@ class ApiService {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/submit',
     );
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
       var file = await http.MultipartFile.fromPath('file', filePath);
       request.files.add(file);
       request.fields['studentId'] = studentId.toString();
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -2867,10 +2855,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
@@ -2884,7 +2869,7 @@ class ApiService {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/submit',
     );
-    
+
     try {
       var request = http.MultipartRequest('POST', url);
       var file = http.MultipartFile.fromBytes(
@@ -2894,10 +2879,10 @@ class ApiService {
       );
       request.files.add(file);
       request.fields['studentId'] = studentId.toString();
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -2907,15 +2892,14 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'Error uploading file: $e',
-      };
+      return {'status': 'error', 'message': 'Error uploading file: $e'};
     }
   }
 
   /// Get all submissions for an assignment (instructor view)
-  Future<Map<String, dynamic>> getAssignmentSubmissions(int assignmentId) async {
+  Future<Map<String, dynamic>> getAssignmentSubmissions(
+    int assignmentId,
+  ) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/$assignmentId/submissions',
     );
@@ -2983,6 +2967,126 @@ class ApiService {
           if (feedback != null) 'feedback': feedback,
         }),
       );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  // ==================== ADVISOR MANAGEMENT ====================
+
+  /// Get all students with their advisor information
+  Future<Map<String, dynamic>> getStudentsWithAdvisors() async {
+    final url = Uri.parse('http://localhost:8080/api/admin/students-advisors');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  /// Assign an advisor to a single student
+  Future<Map<String, dynamic>> assignAdvisor(
+    int studentId,
+    int? advisorId,
+  ) async {
+    final url = Uri.parse('http://localhost:8080/api/admin/assign-advisor');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'studentId': studentId, 'advisorId': advisorId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  /// Assign an advisor to multiple students (bulk)
+  Future<Map<String, dynamic>> assignAdvisorBulk(
+    List<int> studentIds,
+    int? advisorId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/assign-advisor-bulk',
+    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'studentIds': studentIds, 'advisorId': advisorId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  /// Assign an advisor to all students in a department
+  Future<Map<String, dynamic>> assignAdvisorByDepartment(
+    int departmentId,
+    int? advisorId,
+  ) async {
+    final url = Uri.parse(
+      'http://localhost:8080/api/admin/assign-advisor-by-department',
+    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'departmentId': departmentId,
+          'advisorId': advisorId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Server error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get all instructors who can be advisors
+  Future<Map<String, dynamic>> getAdvisorsList() async {
+    final url = Uri.parse('http://localhost:8080/api/admin/advisors-list');
+    try {
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
