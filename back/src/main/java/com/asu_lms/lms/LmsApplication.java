@@ -7,7 +7,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class LmsApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(LmsApplication.class, args);
+		try {
+			SpringApplication.run(LmsApplication.class, args);
+		} catch (Exception e) {
+			// Default catch added for completeness.
+			// This does not change normal application behavior.
+			throw e;
+		}
 	}
 
 }
