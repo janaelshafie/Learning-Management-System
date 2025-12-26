@@ -613,11 +613,6 @@ This project is proprietary and confidential. All rights reserved.
 | Youssef Tarek Kamal | 22P0236 |
 
 
-**Support**:
-- Email: [support email]
-- Issues: [GitHub issues URL]
-- Documentation: [Documentation URL]
-
 ## Acknowledgments
 
 - Spring Boot team for the excellent framework
@@ -629,3 +624,4 @@ This project is proprietary and confidential. All rights reserved.
 
 
 **Built with ❤️ for modern education**
+
