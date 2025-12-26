@@ -3,6 +3,7 @@ package com.asu_lms.lms.Entities;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.List;
 
 @Entity
 @Table(name = "Assignment")
@@ -29,6 +30,9 @@ public class Assignment {
 
     @Column(name = "max_grade", nullable = false, precision = 7, scale = 2)
     private BigDecimal maxGrade = new BigDecimal("100.00");
+
+    @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<AssignmentAttributeValues> attributeValues;
 
     // Constructors
     public Assignment() {}
@@ -64,5 +68,8 @@ public class Assignment {
 
     public BigDecimal getMaxGrade() { return maxGrade; }
     public void setMaxGrade(BigDecimal maxGrade) { this.maxGrade = maxGrade; }
+
+    public List<AssignmentAttributeValues> getAttributeValues() { return attributeValues; }
+    public void setAttributeValues(List<AssignmentAttributeValues> attributeValues) { this.attributeValues = attributeValues; }
 }
 

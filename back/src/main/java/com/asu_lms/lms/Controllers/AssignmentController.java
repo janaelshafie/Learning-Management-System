@@ -46,6 +46,9 @@ public class AssignmentController {
     @Autowired
     private AssignmentFileService assignmentFileService;
 
+    @Autowired
+    private com.asu_lms.lms.Services.EAVService eavService;
+
     /**
      * Create a new assignment
      * POST /api/course/assignments/create
@@ -104,6 +107,9 @@ public class AssignmentController {
                 return response;
             }
 
+            // Initialize default attributes
+            eavService.initializeAssignmentAttributes();
+
             // Create assignment
             Assignment assignment = new Assignment();
             assignment.setOfferedCourseId(offeredCourseId);
@@ -114,6 +120,19 @@ public class AssignmentController {
             assignment.setMaxGrade(maxGrade);
 
             Assignment savedAssignment = assignmentRepository.save(assignment);
+
+            // Handle EAV attributes if provided
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = (Map<String, Object>) request.get("attributes");
+            if (attributes != null) {
+                for (Map.Entry<String, Object> entry : attributes.entrySet()) {
+                    String attrName = entry.getKey();
+                    Object attrValue = entry.getValue();
+                    if (attrValue != null) {
+                        eavService.setAssignmentAttribute(savedAssignment, attrName, attrValue.toString());
+                    }
+                }
+            }
 
             response.put("status", "success");
             response.put("message", "Assignment created successfully");
@@ -192,6 +211,13 @@ public class AssignmentController {
         map.put("description", assignment.getDescription());
         map.put("dueDate", assignment.getDueDate());
         map.put("maxGrade", assignment.getMaxGrade());
+        
+        // Add EAV attributes
+        Map<String, String> attributes = eavService.getAssignmentAttributes(assignment.getAssignmentId());
+        for (Map.Entry<String, String> entry : attributes.entrySet()) {
+            map.put(entry.getKey(), entry.getValue());
+        }
+        
         return map;
     }
 

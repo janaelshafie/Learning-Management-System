@@ -26,9 +26,6 @@ public class RoomReservation {
     @Column(name = "assignment_type", nullable = false)
     private String assignmentType; // 'course', 'instructor', 'department', 'event', 'exam', 'maintenance'
 
-    @Column(name = "related_schedule_id")
-    private Integer relatedScheduleId;
-
     @Column(name = "related_offered_course_id")
     private Integer relatedOfferedCourseId;
 
@@ -100,11 +97,6 @@ public class RoomReservation {
 
     public Integer getReservedByUserId() { return reservedByUserId; }
     public void setReservedByUserId(Integer reservedByUserId) { this.reservedByUserId = reservedByUserId; }
-
-
-
-    public Integer getRelatedScheduleId() { return relatedScheduleId; }
-    public void setRelatedScheduleId(Integer relatedScheduleId) { this.relatedScheduleId = relatedScheduleId; }
 
     public Integer getRelatedOfferedCourseId() { return relatedOfferedCourseId; }
     public void setRelatedOfferedCourseId(Integer relatedOfferedCourseId) { this.relatedOfferedCourseId = relatedOfferedCourseId; }

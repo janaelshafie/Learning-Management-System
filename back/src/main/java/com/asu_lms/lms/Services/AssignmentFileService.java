@@ -629,9 +629,5 @@ public class AssignmentFileService {
         // Remove or replace invalid characters
         return filename.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
     }
-
-    public String getBaseStoragePath() {
-        return baseStoragePath;
-    }
 }
 

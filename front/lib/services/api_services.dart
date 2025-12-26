@@ -967,6 +967,44 @@ class ApiService {
     }
   }
 
+  // Create course material (for links, videos, websites - no file upload)
+  Future<Map<String, dynamic>> createCourseMaterial({
+    required int offeredCourseId,
+    required String title,
+    required String type, // 'link', 'website', 'video', etc.
+    required String urlOrPath,
+    int? instructorId,
+    Map<String, dynamic>? attributes,
+  }) async {
+    final url = Uri.parse('http://localhost:8080/api/course/materials/create');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'offeredCourseId': offeredCourseId,
+          'title': title,
+          'type': type,
+          'urlOrPath': urlOrPath,
+          if (instructorId != null) 'instructorId': instructorId,
+          if (attributes != null) 'attributes': attributes,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'status': 'error',
+          'message': 'Failed to create material: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Error creating material: $e'};
+    }
+  }
+
   // Delete course material
   Future<Map<String, dynamic>> deleteCourseMaterial(int materialId) async {
     final url = Uri.parse(
@@ -984,23 +1022,6 @@ class ApiService {
       }
     } catch (e) {
       return {'status': 'error', 'message': 'Error deleting material: $e'};
-    }
-  }
-
-  // Download course material
-  Future<String?> downloadCourseMaterial(int materialId) async {
-    final url = Uri.parse(
-      'http://localhost:8080/api/course/materials/download/$materialId',
-    );
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        return url.toString();
-      } else {
-        return null;
-      }
-    } catch (e) {
-      return null;
     }
   }
 
@@ -1067,6 +1088,7 @@ class ApiService {
     String? description,
     int? instructorId,
     double? maxGrade,
+    Map<String, dynamic>? attributes,
   }) async {
     final url = Uri.parse(
       'http://localhost:8080/api/course/assignments/create',
@@ -1082,6 +1104,7 @@ class ApiService {
           if (description != null) 'description': description,
           if (instructorId != null) 'instructorId': instructorId,
           if (maxGrade != null) 'maxGrade': maxGrade,
+          if (attributes != null) 'attributes': attributes,
         }),
       );
       if (response.statusCode == 200) {
@@ -1141,6 +1164,7 @@ class ApiService {
     String? description,
     int? instructorId,
     double? maxGrade,
+    Map<String, dynamic>? attributes,
   }) async {
     final url = Uri.parse('http://localhost:8080/api/course/quizzes/create');
     try {
@@ -1154,6 +1178,7 @@ class ApiService {
           if (description != null) 'description': description,
           if (instructorId != null) 'instructorId': instructorId,
           if (maxGrade != null) 'maxGrade': maxGrade,
+          if (attributes != null) 'attributes': attributes,
         }),
       );
       if (response.statusCode == 200) {

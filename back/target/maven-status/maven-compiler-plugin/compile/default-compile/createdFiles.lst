@@ -30,7 +30,6 @@ com\asu_lms\lms\Entities\Announcement.class
 com\asu_lms\lms\Repositories\GradeAttributesRepository.class
 com\asu_lms\lms\Entities\Prerequisite.class
 com\asu_lms\lms\Controllers\DepartmentController.class
-com\asu_lms\lms\Entities\Schedule.class
 com\asu_lms\lms\Repositories\RoomReservationRepository.class
 com\asu_lms\lms\Repositories\InstructorRepository.class
 com\asu_lms\lms\Repositories\MessageRepository.class
@@ -70,6 +69,5 @@ com\asu_lms\lms\Entities\EnrollmentAttributes.class
 com\asu_lms\lms\Repositories\AnnouncementAttributesRepository.class
 com\asu_lms\lms\Repositories\DepartmentCourseRepository.class
 com\asu_lms\lms\Repositories\OfferedCourseInstructorRepository.class
-com\asu_lms\lms\Repositories\ScheduleRepository.class
 com\asu_lms\lms\LmsApplication.class
 com\asu_lms\lms\Repositories\StudentRepository.class

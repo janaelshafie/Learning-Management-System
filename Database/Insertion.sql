@@ -107,47 +107,46 @@ INSERT INTO `User` (user_id, national_id, name, email, official_mail, password_h
 
 -- Insert Student records (using department_id from Department table and linking to parent users)
 INSERT INTO Student (
-    student_id, student_uid, cumulative_gpa, department_id, advisor_id,
-    parent_national_id, parent_phone, parent_email, parent_user_id
+    student_id, student_uid, cumulative_gpa, department_id, advisor_id, parent_user_id
 ) 
 SELECT 
-    201, 'S-201', 3.2, d.department_id, 101, 'PN-201', '0100000201', 'parent201@mail.com', 301
+    201, 'S-201', 3.2, d.department_id, 101, 301
 FROM Department d WHERE d.department_code = 'CSE'
 UNION ALL
 SELECT 
-    202, 'S-202', 2.8, d.department_id, 101, 'PN-202', '0100000202', 'parent202@mail.com', 302
+    202, 'S-202', 2.8, d.department_id, 101, 302
 FROM Department d WHERE d.department_code = 'CSE'
 UNION ALL
 SELECT 
-    203, 'S-203', 3.5, d.department_id, 102, 'PN-203', '0100000203', 'parent203@mail.com', 303
+    203, 'S-203', 3.5, d.department_id, 102, 303
 FROM Department d WHERE d.department_code = 'ARC'
 UNION ALL
 SELECT 
-    204, 'S-204', 3.0, d.department_id, 102, 'PN-204', '0100000204', 'parent204@mail.com', 304
+    204, 'S-204', 3.0, d.department_id, 102, 304
 FROM Department d WHERE d.department_code = 'ARC'
 UNION ALL
 SELECT 
-    205, 'S-205', 2.9, d.department_id, 104, 'PN-205', '0100000205', 'parent205@mail.com', 305
+    205, 'S-205', 2.9, d.department_id, 104, 305
 FROM Department d WHERE d.department_code = 'ECE'
 UNION ALL
 SELECT 
-    206, 'S-206', 3.1, d.department_id, 104, 'PN-206', '0100000206', 'parent206@mail.com', 306
+    206, 'S-206', 3.1, d.department_id, 104, 306
 FROM Department d WHERE d.department_code = 'ECE'
 UNION ALL
 SELECT 
-    207, 'S-207', 3.8, d.department_id, 105, 'PN-207', '0100000207', 'parent207@mail.com', 307
+    207, 'S-207', 3.8, d.department_id, 105, 307
 FROM Department d WHERE d.department_code = 'MCT'
 UNION ALL
 SELECT 
-    208, 'S-208', 3.4, d.department_id, 105, 'PN-208', '0100000208', 'parent208@mail.com', 308
+    208, 'S-208', 3.4, d.department_id, 105, 308
 FROM Department d WHERE d.department_code = 'MCT'
 UNION ALL
 SELECT 
-    209, 'S-209', 2.5, d.department_id, 103, 'PN-209', '0100000209', 'parent209@mail.com', 309
+    209, 'S-209', 2.5, d.department_id, 103, 309
 FROM Department d WHERE d.department_code = 'EPM'
 UNION ALL
 SELECT 
-    210, 'S-210', 2.7, d.department_id, 103, 'PN-210', '0100000210', 'parent210@mail.com', 310
+    210, 'S-210', 2.7, d.department_id, 103, 310
 FROM Department d WHERE d.department_code = 'EPM';
 
 -- -----------------------------------------------------

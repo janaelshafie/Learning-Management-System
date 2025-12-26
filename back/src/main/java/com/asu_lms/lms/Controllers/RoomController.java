@@ -507,9 +507,6 @@ public class RoomController {
             if (request.containsKey("purpose")) {
                 reservation.setPurpose(request.get("purpose").toString());
             }
-            if (request.containsKey("relatedScheduleId")) {
-                reservation.setRelatedScheduleId(Integer.parseInt(request.get("relatedScheduleId").toString()));
-            }
             if (request.containsKey("relatedOfferedCourseId")) {
                 reservation.setRelatedOfferedCourseId(Integer.parseInt(request.get("relatedOfferedCourseId").toString()));
             }

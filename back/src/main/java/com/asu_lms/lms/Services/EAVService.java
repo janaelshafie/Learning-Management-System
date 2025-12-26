@@ -32,6 +32,18 @@ public class EAVService {
     @Autowired
     private AnnouncementAttributeValuesRepository announcementAttributeValuesRepository;
 
+    @Autowired
+    private AssignmentAttributesRepository assignmentAttributesRepository;
+
+    @Autowired
+    private AssignmentAttributeValuesRepository assignmentAttributeValuesRepository;
+
+    @Autowired
+    private QuizAttributesRepository quizAttributesRepository;
+
+    @Autowired
+    private QuizAttributeValuesRepository quizAttributeValuesRepository;
+
     // ========== Grade EAV Methods ==========
     
     public Map<String, String> getGradeAttributes(Integer gradeId) {
@@ -133,6 +145,112 @@ public class EAVService {
         } else {
             AnnouncementAttributeValues aav = new AnnouncementAttributeValues(announcement, attribute, value);
             announcementAttributeValuesRepository.save(aav);
+        }
+    }
+
+    // ========== Assignment EAV Methods ==========
+    
+    @Transactional
+    public void initializeAssignmentAttributes() {
+        String[][] defaultAttributes = {
+            {"late_submission_allowed", "bool"},
+            {"late_penalty_percent", "decimal"},
+            {"max_attempts", "int"},
+            {"plagiarism_check_enabled", "bool"},
+            {"allowed_file_types", "text"},
+            {"file_size_limit_mb", "int"}
+        };
+
+        for (String[] attr : defaultAttributes) {
+            assignmentAttributesRepository.findByAttributeName(attr[0])
+                .orElseGet(() -> {
+                    AssignmentAttributes aa = new AssignmentAttributes(attr[0], attr[1]);
+                    return assignmentAttributesRepository.save(aa);
+                });
+        }
+    }
+
+    public Map<String, String> getAssignmentAttributes(Integer assignmentId) {
+        Map<String, String> attributes = new HashMap<>();
+        List<AssignmentAttributeValues> values = assignmentAttributeValuesRepository
+            .findByAssignment_AssignmentId(assignmentId);
+        for (AssignmentAttributeValues aav : values) {
+            attributes.put(aav.getAttribute().getAttributeName(), aav.getValue());
+        }
+        return attributes;
+    }
+
+    @Transactional
+    public void setAssignmentAttribute(Assignment assignment, String attributeName, String value) {
+        AssignmentAttributes attribute = assignmentAttributesRepository.findByAttributeName(attributeName)
+            .orElseGet(() -> {
+                AssignmentAttributes aa = new AssignmentAttributes(attributeName, "text");
+                return assignmentAttributesRepository.save(aa);
+            });
+
+        Optional<AssignmentAttributeValues> existing = assignmentAttributeValuesRepository
+            .findByAssignment_AssignmentIdAndAttribute_AttributeName(assignment.getAssignmentId(), attributeName);
+
+        if (existing.isPresent()) {
+            existing.get().setValue(value);
+            assignmentAttributeValuesRepository.save(existing.get());
+        } else {
+            AssignmentAttributeValues aav = new AssignmentAttributeValues(assignment, attribute, value);
+            assignmentAttributeValuesRepository.save(aav);
+        }
+    }
+
+    // ========== Quiz EAV Methods ==========
+    
+    @Transactional
+    public void initializeQuizAttributes() {
+        String[][] defaultAttributes = {
+            {"time_limit_minutes", "int"},
+            {"max_attempts", "int"},
+            {"randomize_questions", "bool"},
+            {"randomize_options", "bool"},
+            {"show_results_immediately", "bool"},
+            {"show_correct_answers", "bool"},
+            {"show_feedback_after", "text"},
+            {"attempt_penalty_percent", "decimal"}
+        };
+
+        for (String[] attr : defaultAttributes) {
+            quizAttributesRepository.findByAttributeName(attr[0])
+                .orElseGet(() -> {
+                    QuizAttributes qa = new QuizAttributes(attr[0], attr[1]);
+                    return quizAttributesRepository.save(qa);
+                });
+        }
+    }
+
+    public Map<String, String> getQuizAttributes(Integer quizId) {
+        Map<String, String> attributes = new HashMap<>();
+        List<QuizAttributeValues> values = quizAttributeValuesRepository
+            .findByQuiz_QuizId(quizId);
+        for (QuizAttributeValues qav : values) {
+            attributes.put(qav.getAttribute().getAttributeName(), qav.getValue());
+        }
+        return attributes;
+    }
+
+    @Transactional
+    public void setQuizAttribute(Quiz quiz, String attributeName, String value) {
+        QuizAttributes attribute = quizAttributesRepository.findByAttributeName(attributeName)
+            .orElseGet(() -> {
+                QuizAttributes qa = new QuizAttributes(attributeName, "text");
+                return quizAttributesRepository.save(qa);
+            });
+
+        Optional<QuizAttributeValues> existing = quizAttributeValuesRepository
+            .findByQuiz_QuizIdAndAttribute_AttributeName(quiz.getQuizId(), attributeName);
+
+        if (existing.isPresent()) {
+            existing.get().setValue(value);
+            quizAttributeValuesRepository.save(existing.get());
+        } else {
+            QuizAttributeValues qav = new QuizAttributeValues(quiz, attribute, value);
+            quizAttributeValuesRepository.save(qav);
         }
     }
 }

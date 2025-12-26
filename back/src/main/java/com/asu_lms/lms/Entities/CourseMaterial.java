@@ -2,6 +2,7 @@ package com.asu_lms.lms.Entities;
 
 import jakarta.persistence.*;
 import java.sql.Timestamp;
+import java.util.List;
 
 @Entity
 @Table(name = "CourseMaterial")
@@ -20,17 +21,8 @@ public class CourseMaterial {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "file_name")
-    private String fileName;
-
-    @Column(name = "file_size")
-    private Long fileSize;
-
-    @Column(name = "mime_type")
-    private String mimeType;
-
-    @Column(name = "type", nullable = false, length = 20)
-    private String type;
+    @Column(name = "type", nullable = false, length = 30)
+    private String type; // 'pdf', 'link', 'website', 'file', 'video', 'interactive', 'document', 'powerpoint', 'presentation', 'image', 'audio', 'other'
 
     @Column(name = "url_or_path", nullable = false, length = 1024)
     private String urlOrPath;
@@ -38,19 +30,19 @@ public class CourseMaterial {
     @Column(name = "uploaded_at", nullable = false)
     private Timestamp uploadedAt = new Timestamp(System.currentTimeMillis());
 
+    @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<CourseMaterialAttributeValues> attributeValues;
+
     // Constructors
     public CourseMaterial() {}
 
-    public CourseMaterial(Integer offeredCourseId, Integer instructorId, String title, 
-                         String fileName, Long fileSize, String mimeType, String type, String urlOrPath) {
+    public CourseMaterial(Integer offeredCourseId, Integer instructorId, String title, String type, String urlOrPath) {
         this.offeredCourseId = offeredCourseId;
         this.instructorId = instructorId;
         this.title = title;
-        this.fileName = fileName;
-        this.fileSize = fileSize;
-        this.mimeType = mimeType;
         this.type = type;
         this.urlOrPath = urlOrPath;
+        this.uploadedAt = new Timestamp(System.currentTimeMillis());
     }
 
     // Getters and Setters
@@ -66,15 +58,6 @@ public class CourseMaterial {
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
-    public String getFileName() { return fileName; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
-
-    public Long getFileSize() { return fileSize; }
-    public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
-
-    public String getMimeType() { return mimeType; }
-    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
-
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
 
@@ -83,5 +66,8 @@ public class CourseMaterial {
 
     public Timestamp getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(Timestamp uploadedAt) { this.uploadedAt = uploadedAt; }
+
+    public List<CourseMaterialAttributeValues> getAttributeValues() { return attributeValues; }
+    public void setAttributeValues(List<CourseMaterialAttributeValues> attributeValues) { this.attributeValues = attributeValues; }
 }
 

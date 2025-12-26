@@ -298,21 +298,26 @@ class _InstructorCourseManagementScreenState
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: _isUploadingMaterial ? null : _uploadMaterial,
-            icon: _isUploadingMaterial
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.upload_file),
-            label: Text(_isUploadingMaterial ? 'Uploading...' : 'Upload Material'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _isUploadingMaterial ? null : _showAddMaterialMenu,
+                icon: _isUploadingMaterial
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_isUploadingMaterial ? 'Uploading...' : 'Add Material'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -341,7 +346,7 @@ class _InstructorCourseManagementScreenState
                       child: ListTile(
                         leading: _getMaterialIcon(material['type']?.toString() ?? 'file'),
                         title: Text(
-                          material['title'] ?? material['fileName'] ?? 'Untitled',
+                          material['title'] ?? material['file_name'] ?? 'Untitled',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Column(
@@ -356,6 +361,32 @@ class _InstructorCourseManagementScreenState
                               Text(
                                 _formatDate(material['uploadedAt'].toString()),
                                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                            // Show metadata
+                            if (material['page_count'] != null)
+                              Text(
+                                '${material['page_count']} pages',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            if (material['slide_count'] != null)
+                              Text(
+                                '${material['slide_count']} slides',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            if (material['duration_minutes'] != null)
+                              Text(
+                                '${material['duration_minutes']} minutes',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            if (material['video_format'] != null)
+                              Text(
+                                'Format: ${material['video_format']}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            if (material['language'] != null)
+                              Text(
+                                'Language: ${material['language']}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                               ),
                           ],
                         ),
@@ -379,6 +410,55 @@ class _InstructorCourseManagementScreenState
     );
   }
 
+  Future<void> _showAddMaterialMenu() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.upload_file, color: Color(0xFF1E3A8A)),
+              title: const Text('Upload File'),
+              subtitle: const Text('PDF, Document, PowerPoint, Image, etc.'),
+              onTap: () => Navigator.pop(context, 'upload'),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.link, color: Color(0xFF1E3A8A)),
+              title: const Text('Add Link'),
+              subtitle: const Text('External website or resource link'),
+              onTap: () => Navigator.pop(context, 'link'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library, color: Color(0xFF1E3A8A)),
+              title: const Text('Add Video'),
+              subtitle: const Text('Video URL (YouTube, Vimeo, etc.)'),
+              onTap: () => Navigator.pop(context, 'video'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.public, color: Color(0xFF1E3A8A)),
+              title: const Text('Add Website'),
+              subtitle: const Text('Website URL'),
+              onTap: () => Navigator.pop(context, 'website'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == 'upload') {
+      _uploadMaterial();
+    } else if (result == 'link') {
+      _showCreateLinkDialog();
+    } else if (result == 'video') {
+      _showCreateVideoDialog();
+    } else if (result == 'website') {
+      _showCreateWebsiteDialog();
+    }
+  }
+
   Future<void> _uploadMaterial() async {
     if (_offeredCourseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -392,7 +472,10 @@ class _InstructorCourseManagementScreenState
       // For mobile/desktop, we can get path
       final pickResult = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 
+                           'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 
+                           'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv',
+                           'mp3', 'wav', 'ogg', 'm4a'],
         allowMultiple: false,
         withData: true, // This ensures bytes are available on web
       );
@@ -489,11 +572,11 @@ class _InstructorCourseManagementScreenState
   }
 
   Future<void> _deleteMaterial(Map<String, dynamic> material) async {
-    final confirmed = await showDialog<bool>(
+      final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Material'),
-        content: Text('Are you sure you want to delete "${material['title'] ?? material['fileName']}"?'),
+        content: Text('Are you sure you want to delete "${material['title'] ?? material['file_name'] ?? 'this material'}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -532,10 +615,461 @@ class _InstructorCourseManagementScreenState
   }
 
   Future<void> _viewMaterial(Map<String, dynamic> material) async {
-    // TODO: Implement material viewing/downloading
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Material viewing will be implemented.')),
+    final type = material['type']?.toString().toLowerCase() ?? '';
+    
+    if (type == 'link' || type == 'website') {
+      // Open link in browser
+      final url = material['urlOrPath'] ?? material['link_url'];
+      if (url != null && url.toString().isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Opening: $url'),
+            action: SnackBarAction(
+              label: 'Copy',
+              onPressed: () {
+                // Copy to clipboard would need clipboard package
+              },
+            ),
+          ),
+        );
+      }
+    } else if (type == 'video') {
+      final url = material['urlOrPath'] ?? material['link_url'];
+      if (url != null && url.toString().isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Opening video: $url'),
+          ),
+        );
+      }
+    } else {
+      // For files, show download/view option
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File download will be implemented.')),
+      );
+    }
+  }
+
+  Future<void> _showCreateLinkDialog() async {
+    final titleController = TextEditingController();
+    final urlController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final languageController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Link'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL *',
+                  border: OutlineInputBorder(),
+                  hintText: 'https://example.com',
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: languageController,
+                decoration: const InputDecoration(
+                  labelText: 'Language (Optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., English, Arabic',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
     );
+
+    if (result == true && _offeredCourseId != null) {
+      if (titleController.text.trim().isEmpty || urlController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Title and URL are required'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isUploadingMaterial = true;
+      });
+
+      final attributes = <String, dynamic>{
+        'link_url': urlController.text.trim(),
+      };
+      if (descriptionController.text.trim().isNotEmpty) {
+        attributes['link_description'] = descriptionController.text.trim();
+      }
+      if (languageController.text.trim().isNotEmpty) {
+        attributes['language'] = languageController.text.trim();
+      }
+
+      final createResult = await _apiService.createCourseMaterial(
+        offeredCourseId: _offeredCourseId!,
+        title: titleController.text.trim(),
+        type: 'link',
+        urlOrPath: urlController.text.trim(),
+        instructorId: widget.instructorId,
+        attributes: attributes,
+      );
+
+      setState(() {
+        _isUploadingMaterial = false;
+      });
+
+      if (mounted) {
+        if (createResult['status'] == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Link added successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadMaterials();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(createResult['message'] ?? 'Error adding link'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showCreateVideoDialog() async {
+    final titleController = TextEditingController();
+    final urlController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final durationController = TextEditingController();
+    final videoFormatController = TextEditingController();
+    final languageController = TextEditingController();
+
+    // Auto-detect video format from URL
+    void detectVideoFormat() {
+      final url = urlController.text.trim().toLowerCase();
+      if (url.contains('youtube.com') || url.contains('youtu.be')) {
+        videoFormatController.text = 'youtube';
+      } else if (url.contains('vimeo.com')) {
+        videoFormatController.text = 'vimeo';
+      } else if (url.endsWith('.mp4')) {
+        videoFormatController.text = 'mp4';
+      } else if (url.endsWith('.webm')) {
+        videoFormatController.text = 'webm';
+      }
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Video'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Video URL *',
+                  border: OutlineInputBorder(),
+                  hintText: 'https://youtube.com/watch?v=... or https://vimeo.com/...',
+                ),
+                keyboardType: TextInputType.url,
+                onChanged: (value) => detectVideoFormat(),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: durationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Duration (minutes)',
+                        border: OutlineInputBorder(),
+                        hintText: 'e.g., 15.5',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: videoFormatController,
+                      decoration: const InputDecoration(
+                        labelText: 'Video Format',
+                        border: OutlineInputBorder(),
+                        hintText: 'Auto-detected',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: languageController,
+                decoration: const InputDecoration(
+                  labelText: 'Language (Optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., English, Arabic',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && _offeredCourseId != null) {
+      if (titleController.text.trim().isEmpty || urlController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Title and Video URL are required'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isUploadingMaterial = true;
+      });
+
+      final attributes = <String, dynamic>{
+        'link_url': urlController.text.trim(),
+      };
+      if (descriptionController.text.trim().isNotEmpty) {
+        attributes['link_description'] = descriptionController.text.trim();
+      }
+      if (durationController.text.trim().isNotEmpty) {
+        attributes['duration_minutes'] = durationController.text.trim();
+      }
+      if (videoFormatController.text.trim().isNotEmpty) {
+        attributes['video_format'] = videoFormatController.text.trim();
+      }
+      if (languageController.text.trim().isNotEmpty) {
+        attributes['language'] = languageController.text.trim();
+      }
+
+      final createResult = await _apiService.createCourseMaterial(
+        offeredCourseId: _offeredCourseId!,
+        title: titleController.text.trim(),
+        type: 'video',
+        urlOrPath: urlController.text.trim(),
+        instructorId: widget.instructorId,
+        attributes: attributes,
+      );
+
+      setState(() {
+        _isUploadingMaterial = false;
+      });
+
+      if (mounted) {
+        if (createResult['status'] == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Video added successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadMaterials();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(createResult['message'] ?? 'Error adding video'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showCreateWebsiteDialog() async {
+    final titleController = TextEditingController();
+    final urlController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final languageController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Website'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Website URL *',
+                  border: OutlineInputBorder(),
+                  hintText: 'https://example.com',
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: languageController,
+                decoration: const InputDecoration(
+                  labelText: 'Language (Optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., English, Arabic',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && _offeredCourseId != null) {
+      if (titleController.text.trim().isEmpty || urlController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Title and Website URL are required'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isUploadingMaterial = true;
+      });
+
+      final attributes = <String, dynamic>{
+        'link_url': urlController.text.trim(),
+      };
+      if (descriptionController.text.trim().isNotEmpty) {
+        attributes['link_description'] = descriptionController.text.trim();
+      }
+      if (languageController.text.trim().isNotEmpty) {
+        attributes['language'] = languageController.text.trim();
+      }
+
+      final createResult = await _apiService.createCourseMaterial(
+        offeredCourseId: _offeredCourseId!,
+        title: titleController.text.trim(),
+        type: 'website',
+        urlOrPath: urlController.text.trim(),
+        instructorId: widget.instructorId,
+        attributes: attributes,
+      );
+
+      setState(() {
+        _isUploadingMaterial = false;
+      });
+
+      if (mounted) {
+        if (createResult['status'] == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Website added successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadMaterials();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(createResult['message'] ?? 'Error adding website'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   // ========== ANNOUNCEMENTS TAB ==========
@@ -955,6 +1489,16 @@ class _InstructorCourseManagementScreenState
     final descriptionController = TextEditingController();
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
+    
+    // Quiz EAV attributes
+    final timeLimitController = TextEditingController(); // minutes
+    final maxAttemptsController = TextEditingController(text: '1');
+    bool randomizeQuestions = false;
+    bool randomizeOptions = false;
+    bool showResultsImmediately = false;
+    bool showCorrectAnswers = false;
+    String? showFeedbackAfter; // 'immediately', 'after_submission', 'after_due_date'
+    final attemptPenaltyController = TextEditingController(text: '0');
 
     await showDialog(
       context: context,
@@ -970,7 +1514,7 @@ class _InstructorCourseManagementScreenState
                   TextField(
                     controller: titleController,
                     decoration: const InputDecoration(
-                      labelText: 'Title',
+                      labelText: 'Title *',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -987,7 +1531,7 @@ class _InstructorCourseManagementScreenState
                   ListTile(
                     title: Text(
                       selectedDate == null
-                          ? 'Select Due Date'
+                          ? 'Select Due Date *'
                           : 'Due Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
                     ),
                     trailing: const Icon(Icons.calendar_today),
@@ -1023,6 +1567,98 @@ class _InstructorCourseManagementScreenState
                         });
                       }
                     },
+                  ),
+                  const Divider(),
+                  const Text(
+                    'Quiz Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: timeLimitController,
+                    decoration: const InputDecoration(
+                      labelText: 'Time Limit (minutes, optional)',
+                      border: OutlineInputBorder(),
+                      hintText: 'Leave empty for unlimited',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: maxAttemptsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Max Attempts',
+                      border: OutlineInputBorder(),
+                      hintText: '1',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('Randomize Questions'),
+                    value: randomizeQuestions,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        randomizeQuestions = value;
+                      });
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Randomize Options'),
+                    value: randomizeOptions,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        randomizeOptions = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    title: const Text('Show Results Immediately'),
+                    value: showResultsImmediately,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        showResultsImmediately = value;
+                      });
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Show Correct Answers'),
+                    value: showCorrectAnswers,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        showCorrectAnswers = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: showFeedbackAfter,
+                    decoration: const InputDecoration(
+                      labelText: 'Show Feedback After',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('Never')),
+                      DropdownMenuItem(value: 'immediately', child: Text('Immediately')),
+                      DropdownMenuItem(value: 'after_submission', child: Text('After Submission')),
+                      DropdownMenuItem(value: 'after_due_date', child: Text('After Due Date')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        showFeedbackAfter = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: attemptPenaltyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Attempt Penalty (%)',
+                      border: OutlineInputBorder(),
+                      hintText: '0',
+                    ),
+                    keyboardType: TextInputType.number,
                   ),
                 ],
               ),
@@ -1054,6 +1690,20 @@ class _InstructorCourseManagementScreenState
                   descriptionController.text.trim(),
                   selectedDate!,
                   selectedTime,
+                  timeLimitMinutes: timeLimitController.text.trim().isEmpty 
+                      ? null 
+                      : int.tryParse(timeLimitController.text.trim()),
+                  maxAttempts: maxAttemptsController.text.trim().isEmpty 
+                      ? null 
+                      : int.tryParse(maxAttemptsController.text.trim()),
+                  randomizeQuestions: randomizeQuestions,
+                  randomizeOptions: randomizeOptions,
+                  showResultsImmediately: showResultsImmediately,
+                  showCorrectAnswers: showCorrectAnswers,
+                  showFeedbackAfter: showFeedbackAfter,
+                  attemptPenaltyPercent: attemptPenaltyController.text.trim().isEmpty 
+                      ? null 
+                      : double.tryParse(attemptPenaltyController.text.trim()),
                 );
               },
               child: const Text('Create'),
@@ -1069,6 +1719,14 @@ class _InstructorCourseManagementScreenState
     final descriptionController = TextEditingController();
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
+    
+    // Assignment EAV attributes
+    bool lateSubmissionAllowed = false;
+    final latePenaltyController = TextEditingController(text: '0');
+    final maxAttemptsController = TextEditingController(text: '1');
+    final allowedFileTypesController = TextEditingController(text: 'pdf,doc,docx');
+    final fileSizeLimitController = TextEditingController(text: '10'); // MB
+    bool plagiarismCheckEnabled = false;
 
     await showDialog(
       context: context,
@@ -1084,7 +1742,7 @@ class _InstructorCourseManagementScreenState
                   TextField(
                     controller: titleController,
                     decoration: const InputDecoration(
-                      labelText: 'Title',
+                      labelText: 'Title *',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -1101,7 +1759,7 @@ class _InstructorCourseManagementScreenState
                   ListTile(
                     title: Text(
                       selectedDate == null
-                          ? 'Select Due Date'
+                          ? 'Select Due Date *'
                           : 'Due Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
                     ),
                     trailing: const Icon(Icons.calendar_today),
@@ -1136,6 +1794,71 @@ class _InstructorCourseManagementScreenState
                           selectedTime = picked;
                         });
                       }
+                    },
+                  ),
+                  const Divider(),
+                  const Text(
+                    'Submission Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    title: const Text('Allow Late Submission'),
+                    value: lateSubmissionAllowed,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        lateSubmissionAllowed = value;
+                      });
+                    },
+                  ),
+                  if (lateSubmissionAllowed) ...[
+                    TextField(
+                      controller: latePenaltyController,
+                      decoration: const InputDecoration(
+                        labelText: 'Late Penalty (%)',
+                        border: OutlineInputBorder(),
+                        hintText: '0-100',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  TextField(
+                    controller: maxAttemptsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Max Attempts',
+                      border: OutlineInputBorder(),
+                      hintText: '1',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: allowedFileTypesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Allowed File Types (comma-separated)',
+                      border: OutlineInputBorder(),
+                      hintText: 'pdf,doc,docx,txt',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: fileSizeLimitController,
+                    decoration: const InputDecoration(
+                      labelText: 'File Size Limit (MB)',
+                      border: OutlineInputBorder(),
+                      hintText: '10',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('Enable Plagiarism Check'),
+                    value: plagiarismCheckEnabled,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        plagiarismCheckEnabled = value;
+                      });
                     },
                   ),
                 ],
@@ -1168,6 +1891,20 @@ class _InstructorCourseManagementScreenState
                   descriptionController.text.trim(),
                   selectedDate!,
                   selectedTime,
+                  lateSubmissionAllowed: lateSubmissionAllowed,
+                  latePenaltyPercent: latePenaltyController.text.trim().isEmpty 
+                      ? null 
+                      : double.tryParse(latePenaltyController.text.trim()),
+                  maxAttempts: maxAttemptsController.text.trim().isEmpty 
+                      ? null 
+                      : int.tryParse(maxAttemptsController.text.trim()),
+                  allowedFileTypes: allowedFileTypesController.text.trim().isEmpty 
+                      ? null 
+                      : allowedFileTypesController.text.trim(),
+                  fileSizeLimitMb: fileSizeLimitController.text.trim().isEmpty 
+                      ? null 
+                      : int.tryParse(fileSizeLimitController.text.trim()),
+                  plagiarismCheckEnabled: plagiarismCheckEnabled,
                 );
               },
               child: const Text('Create'),
@@ -1178,7 +1915,20 @@ class _InstructorCourseManagementScreenState
     );
   }
 
-  Future<void> _createQuiz(String title, String description, DateTime dueDate, TimeOfDay? dueTime) async {
+  Future<void> _createQuiz(
+    String title,
+    String description,
+    DateTime dueDate,
+    TimeOfDay? dueTime, {
+    int? timeLimitMinutes,
+    int? maxAttempts,
+    bool? randomizeQuestions,
+    bool? randomizeOptions,
+    bool? showResultsImmediately,
+    bool? showCorrectAnswers,
+    String? showFeedbackAfter,
+    double? attemptPenaltyPercent,
+  }) async {
     if (_offeredCourseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Course ID not found')),
@@ -1202,12 +1952,40 @@ class _InstructorCourseManagementScreenState
 
       final dueDateStr = '${dueDateTime.year}-${dueDateTime.month.toString().padLeft(2, '0')}-${dueDateTime.day.toString().padLeft(2, '0')} ${dueDateTime.hour.toString().padLeft(2, '0')}:${dueDateTime.minute.toString().padLeft(2, '0')}:00';
 
+      // Build attributes map
+      Map<String, dynamic> attributes = {};
+      if (timeLimitMinutes != null) {
+        attributes['time_limit_minutes'] = timeLimitMinutes.toString();
+      }
+      if (maxAttempts != null) {
+        attributes['max_attempts'] = maxAttempts.toString();
+      }
+      if (randomizeQuestions != null) {
+        attributes['randomize_questions'] = randomizeQuestions.toString();
+      }
+      if (randomizeOptions != null) {
+        attributes['randomize_options'] = randomizeOptions.toString();
+      }
+      if (showResultsImmediately != null) {
+        attributes['show_results_immediately'] = showResultsImmediately.toString();
+      }
+      if (showCorrectAnswers != null) {
+        attributes['show_correct_answers'] = showCorrectAnswers.toString();
+      }
+      if (showFeedbackAfter != null && showFeedbackAfter.isNotEmpty) {
+        attributes['show_feedback_after'] = showFeedbackAfter;
+      }
+      if (attemptPenaltyPercent != null) {
+        attributes['attempt_penalty_percent'] = attemptPenaltyPercent.toString();
+      }
+
       final result = await _apiService.createQuiz(
         offeredCourseId: _offeredCourseId!,
         title: title,
         description: description.isEmpty ? null : description,
         dueDate: dueDateStr,
         instructorId: widget.instructorId,
+        attributes: attributes.isNotEmpty ? attributes : null,
       );
 
       if (mounted) {
@@ -1244,7 +2022,18 @@ class _InstructorCourseManagementScreenState
     }
   }
 
-  Future<void> _createAssignment(String title, String description, DateTime dueDate, TimeOfDay? dueTime) async {
+  Future<void> _createAssignment(
+    String title,
+    String description,
+    DateTime dueDate,
+    TimeOfDay? dueTime, {
+    bool? lateSubmissionAllowed,
+    double? latePenaltyPercent,
+    int? maxAttempts,
+    String? allowedFileTypes,
+    int? fileSizeLimitMb,
+    bool? plagiarismCheckEnabled,
+  }) async {
     if (_offeredCourseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Course ID not found')),
@@ -1268,12 +2057,34 @@ class _InstructorCourseManagementScreenState
 
       final dueDateStr = '${dueDateTime.year}-${dueDateTime.month.toString().padLeft(2, '0')}-${dueDateTime.day.toString().padLeft(2, '0')} ${dueDateTime.hour.toString().padLeft(2, '0')}:${dueDateTime.minute.toString().padLeft(2, '0')}:00';
 
+      // Build attributes map
+      Map<String, dynamic> attributes = {};
+      if (lateSubmissionAllowed != null) {
+        attributes['late_submission_allowed'] = lateSubmissionAllowed.toString();
+      }
+      if (latePenaltyPercent != null) {
+        attributes['late_penalty_percent'] = latePenaltyPercent.toString();
+      }
+      if (maxAttempts != null) {
+        attributes['max_attempts'] = maxAttempts.toString();
+      }
+      if (allowedFileTypes != null && allowedFileTypes.isNotEmpty) {
+        attributes['allowed_file_types'] = allowedFileTypes;
+      }
+      if (fileSizeLimitMb != null) {
+        attributes['file_size_limit_mb'] = fileSizeLimitMb.toString();
+      }
+      if (plagiarismCheckEnabled != null) {
+        attributes['plagiarism_check_enabled'] = plagiarismCheckEnabled.toString();
+      }
+
       final result = await _apiService.createAssignment(
         offeredCourseId: _offeredCourseId!,
         title: title,
         description: description.isEmpty ? null : description,
         dueDate: dueDateStr,
         instructorId: widget.instructorId,
+        attributes: attributes.isNotEmpty ? attributes : null,
       );
 
       if (mounted) {
@@ -1946,15 +2757,34 @@ class _InstructorCourseManagementScreenState
         icon = Icons.picture_as_pdf;
         color = Colors.red;
         break;
-      case 'doc':
-      case 'docx':
+      case 'document':
         icon = Icons.description;
         color = Colors.blue;
         break;
-      case 'ppt':
-      case 'pptx':
+      case 'powerpoint':
+      case 'presentation':
         icon = Icons.slideshow;
         color = Colors.orange;
+        break;
+      case 'video':
+        icon = Icons.video_library;
+        color = Colors.purple;
+        break;
+      case 'link':
+        icon = Icons.link;
+        color = Colors.blue;
+        break;
+      case 'website':
+        icon = Icons.public;
+        color = Colors.green;
+        break;
+      case 'image':
+        icon = Icons.image;
+        color = Colors.pink;
+        break;
+      case 'audio':
+        icon = Icons.audio_file;
+        color = Colors.amber;
         break;
       case 'xls':
       case 'xlsx':

@@ -23,30 +23,6 @@ public class LoginController {
     @Autowired
     private UserRepository userRepository;
 
-    // Debug endpoint to check database connection and users
-    @GetMapping("/debug/users")
-    public Map<String, Object> getAllUsers() {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            java.util.List<User> users = userRepository.findAll();
-            response.put("status", "success");
-            response.put("totalUsers", users.size());
-            response.put("users", users.stream().map(user -> {
-                Map<String, String> userData = new HashMap<>();
-                userData.put("userId", String.valueOf(user.getUserId()));
-                userData.put("email", user.getEmail());
-                userData.put("officialMail", user.getOfficialMail());
-                userData.put("role", user.getRole());
-                userData.put("accountStatus", user.getAccountStatus());
-                return userData;
-            }).collect(java.util.stream.Collectors.toList()));
-        } catch (Exception e) {
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-        }
-        return response;
-    }
-
     @PostMapping("/login")
     public Map<String , Object> login(@RequestBody Map<String , String> request) {
         String email = request.get("email");

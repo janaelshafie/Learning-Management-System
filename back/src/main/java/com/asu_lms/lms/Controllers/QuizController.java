@@ -22,6 +22,9 @@ public class QuizController {
     @Autowired
     private OfferedCourseRepository offeredCourseRepository;
 
+    @Autowired
+    private com.asu_lms.lms.Services.EAVService eavService;
+
     /**
      * Create a new quiz
      * POST /api/course/quizzes/create
@@ -80,6 +83,9 @@ public class QuizController {
                 return response;
             }
 
+            // Initialize default attributes
+            eavService.initializeQuizAttributes();
+
             // Create quiz
             Quiz quiz = new Quiz();
             quiz.setOfferedCourseId(offeredCourseId);
@@ -90,6 +96,19 @@ public class QuizController {
             quiz.setMaxGrade(maxGrade);
 
             Quiz savedQuiz = quizRepository.save(quiz);
+
+            // Handle EAV attributes if provided
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = (Map<String, Object>) request.get("attributes");
+            if (attributes != null) {
+                for (Map.Entry<String, Object> entry : attributes.entrySet()) {
+                    String attrName = entry.getKey();
+                    Object attrValue = entry.getValue();
+                    if (attrValue != null) {
+                        eavService.setQuizAttribute(savedQuiz, attrName, attrValue.toString());
+                    }
+                }
+            }
 
             response.put("status", "success");
             response.put("message", "Quiz created successfully");
@@ -168,6 +187,13 @@ public class QuizController {
         map.put("description", quiz.getDescription());
         map.put("dueDate", quiz.getDueDate());
         map.put("maxGrade", quiz.getMaxGrade());
+        
+        // Add EAV attributes
+        Map<String, String> attributes = eavService.getQuizAttributes(quiz.getQuizId());
+        for (Map.Entry<String, String> entry : attributes.entrySet()) {
+            map.put(entry.getKey(), entry.getValue());
+        }
+        
         return map;
     }
 

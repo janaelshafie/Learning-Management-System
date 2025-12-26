@@ -13,12 +13,10 @@ USE university_lms_db;
 DROP TABLE IF EXISTS RoomMaintenanceIssue;
 DROP TABLE IF EXISTS RoomReservation;
 DROP TABLE IF EXISTS PendingProfileChanges;
-DROP TABLE IF EXISTS FacultyResearch;
 DROP TABLE IF EXISTS Message;
 DROP TABLE IF EXISTS AnnouncementAttributeValues;
 DROP TABLE IF EXISTS AnnouncementAttributes;
 DROP TABLE IF EXISTS Announcement;
-DROP TABLE IF EXISTS QuizSubmission;
 DROP TABLE IF EXISTS QuizAttributeValues;
 DROP TABLE IF EXISTS QuizAttributes;
 DROP TABLE IF EXISTS Quiz;
@@ -29,9 +27,6 @@ DROP TABLE IF EXISTS Assignment;
 DROP TABLE IF EXISTS CourseMaterialAttributeValues;
 DROP TABLE IF EXISTS CourseMaterialAttributes;
 DROP TABLE IF EXISTS CourseMaterial;
-DROP TABLE IF EXISTS ScheduleAttributeValues;
-DROP TABLE IF EXISTS ScheduleAttributes;
-DROP TABLE IF EXISTS Schedule;
 DROP TABLE IF EXISTS GradeAttributeValues;
 DROP TABLE IF EXISTS GradeAttributes;
 DROP TABLE IF EXISTS Grade;
@@ -123,11 +118,6 @@ CREATE TABLE Student (
     cumulative_gpa DECIMAL(3, 2),
     department_id INT,
     advisor_id INT,
-    -- Parent communication requirements:
-    parent_national_id VARCHAR(255) NOT NULL,
-    parent_phone VARCHAR(20),
-    parent_email VARCHAR(255),
-    registration_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- Keep optional link to parent user account if parent has a user account
     parent_user_id INT NULL,
     FOREIGN KEY (student_id) REFERENCES `User`(user_id)
@@ -141,9 +131,7 @@ CREATE TABLE Student (
         ON UPDATE NO ACTION,
     FOREIGN KEY (parent_user_id) REFERENCES `User`(user_id)
         ON DELETE SET NULL
-        ON UPDATE NO ACTION,
-    -- enforce at least one parent contact method (phone or email)
-    CHECK (parent_phone IS NOT NULL OR parent_email IS NOT NULL)
+        ON UPDATE NO ACTION
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------
@@ -249,8 +237,7 @@ CREATE TABLE OfferedCourse_Instructor (
 -- -----------------------------------------------------
 -- 1.6 Communication & Misc Tables (Fixed Schema)
 -- -----------------------------------------------------
--- Note: AssignmentSubmission and QuizSubmission moved to EAV section 
---       (after Assignment and Quiz tables are created)
+-- Note: AssignmentSubmission moved after Assignment table (references Assignment)
 -- Note: Announcement moved to EAV Model section (unified for admin and instructor)
 
 CREATE TABLE Message (
@@ -265,17 +252,6 @@ CREATE TABLE Message (
         ON UPDATE NO ACTION,
     FOREIGN KEY (recipient_user_id) REFERENCES `User`(user_id)
         ON DELETE NO ACTION
-        ON UPDATE NO ACTION
-) ENGINE=InnoDB;
-
-CREATE TABLE FacultyResearch (
-    research_id INT AUTO_INCREMENT PRIMARY KEY,
-    instructor_id INT NOT NULL,
-    publication_title VARCHAR(1024) NOT NULL,
-    journal_or_conference VARCHAR(255),
-    publish_date DATE NOT NULL,
-    FOREIGN KEY (instructor_id) REFERENCES Instructor(instructor_id)
-        ON DELETE CASCADE
         ON UPDATE NO ACTION
 ) ENGINE=InnoDB;
 
@@ -353,22 +329,7 @@ CREATE TABLE EnrollmentAttributeValues (
     UNIQUE(enrollment_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Enrollment Attributes to insert:
--- 'status' (text: 'pending', 'approved', 'rejected', 'drop_pending', 'withdrawn', 'completed')
--- 'enrollment_date' (datetime) - When enrollment was created/requested
--- 'approval_date' (datetime) - When enrollment was approved
--- 'withdrawal_date' (datetime) - When student withdrew
--- 'withdrawal_reason' (text) - Reason for withdrawal
--- 'rejection_reason' (text) - Reason for rejection
--- 'financial_aid_status' (text) - Financial aid status
--- 'scholarship_info_json' (json) - Scholarship details
--- 'waitlist_position' (int) - Position in waitlist (if applicable)
--- 'special_notes' (text) - Special notes about enrollment
--- 'advisor_notes' (text) - Notes from advisor
--- 'approval_notes' (text) - Notes from approver
--- 'payment_status' (text) - Payment status
--- 'payment_date' (datetime) - Payment date
--- 'prerequisite_waivers_json' (json) - Prerequisites that were waived
+-- Enrollment attributes are created dynamically as needed through the EAV service
 
 -- -----------------------------------------------------
 -- 2.2 Grade EAV Model
@@ -412,33 +373,30 @@ CREATE TABLE GradeAttributeValues (
     UNIQUE(grade_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Grade Attributes to insert:
--- 'midterm' (decimal, max 20), 'project' (decimal, max 20), 
--- 'assignments_total' (decimal, max 10), 'quizzes_total' (decimal, max 5),
--- 'attendance' (decimal, max 5), 'final_exam_mark' (decimal, max 40),
--- 'lab_grade' (decimal, max 10), 'presentation_grade' (decimal, max 10),
--- 'participation' (decimal, max 5), 'peer_review' (decimal, max 5)
+-- Grade attributes are created dynamically as needed through the EAV service and course grade configuration
 
 -- -----------------------------------------------------
 -- 2.3 CourseMaterial EAV Model
 -- -----------------------------------------------------
 -- WHY EAV: Different material types need different metadata.
--- PDFs: page count, file size
--- Videos: duration, resolution, subtitles
--- Links: description, preview image
+-- PDFs: page count, file size, file_name, mime_type
+-- Videos: duration, resolution, subtitles, file_size
+-- Links/Websites: description, preview image, link_url
+-- Powerpoints: file_size, slide_count, file_name, mime_type
+-- Documents: file_size, file_name, mime_type, page_count
 -- Interactive: tool name, configuration
 -- EAV allows extensible metadata without schema changes.
 -- 
--- Base table stores: course reference, title, type, url/path, upload date
--- EAV stores: file_size, duration, language, difficulty, tags, 
---             version, download_count, preview_image, etc.
+-- Base table stores ONLY: course reference, title, type, url/path, upload date
+-- ALL metadata (file_name, file_size, mime_type, duration, language, difficulty, 
+-- tags, version, download_count, preview_image, etc.) is stored in EAV tables.
 -- -----------------------------------------------------
 CREATE TABLE CourseMaterial (
     material_id INT AUTO_INCREMENT PRIMARY KEY,
     offered_course_id INT NOT NULL,
     instructor_id INT,
     title VARCHAR(255) NOT NULL,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('pdf', 'link', 'file', 'video', 'interactive', 'document')),
+    type VARCHAR(30) NOT NULL CHECK (type IN ('pdf', 'link', 'website', 'file', 'video', 'interactive', 'document', 'powerpoint', 'presentation', 'image', 'audio', 'other')),
     url_or_path VARCHAR(1024) NOT NULL,
     uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (offered_course_id) REFERENCES OfferedCourse(offered_course_id)
@@ -469,14 +427,24 @@ CREATE TABLE CourseMaterialAttributeValues (
     UNIQUE(material_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example CourseMaterial Attributes to insert:
--- 'file_size' (int, bytes), 'duration_minutes' (decimal), 
--- 'language' (text), 'difficulty_level' (text), 'tags_json' (json),
--- 'download_count' (int), 'version' (text), 'preview_image' (text),
--- 'subtitle_available' (bool), 'resolution' (text for videos)
+-- CourseMaterial Attributes (initialized by backend, stored in EAV):
+-- Common for files (PDF, PowerPoint, Document, Image, etc.):
+--   'file_name' (text) - Original filename
+--   'file_size' (int, bytes) - File size in bytes
+--   'mime_type' (text) - MIME type (e.g., 'application/pdf', 'application/vnd.ms-powerpoint')
+--   'page_count' (int) - Number of pages (for PDFs, auto-extracted)
+--   'slide_count' (int) - Number of slides (for PowerPoints, auto-extracted)
+-- For videos:
+--   'duration_minutes' (decimal) - Video duration
+--   'video_format' (text) - Video format (e.g., 'mp4', 'avi', 'youtube', auto-detected)
+-- For links/websites:
+--   'link_url' (text) - The actual URL if type is 'link', 'video', or 'website'
+--   'link_description' (text) - Description of the link
+-- General metadata:
+--   'language' (text) - Language of the material
 
 -- -----------------------------------------------------
--- 2.3.1 Rooms EAV Model (Moved here before Schedule)
+-- 2.3.1 Rooms EAV Model
 -- -----------------------------------------------------
 -- WHY EAV: Rooms have variable attributes:
 -- - Labs: equipment_list, software_installed, safety_requirements
@@ -520,90 +488,20 @@ CREATE TABLE RoomAttributeValues (
     UNIQUE(room_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Room Attributes to insert:
--- 'equipment_list_json' (json), 'software_installed_json' (json),
--- 'projector_type' (text), 'whiteboard_count' (int),
--- 'seating_arrangement' (text), 'safety_requirements_json' (json),
--- 'wifi_available' (bool), 'air_conditioning' (bool)
-
--- -----------------------------------------------------
--- 2.4 Schedule EAV Model
--- -----------------------------------------------------
--- WHY EAV: Schedules have variable attributes:
--- - Online classes: zoom_link, meeting_id, timezone
--- - Recurring patterns: recurrence_pattern, exceptions
--- - Room requirements: equipment_needs, special_instructions
--- - Hybrid classes: online/offline flags
--- EAV supports flexible scheduling without schema changes.
--- 
--- Base table stores: course/section reference, type, day, time, location
--- EAV stores: zoom_link, meeting_id, recurrence_pattern, 
---             room_requirements, special_notes, is_online, timezone
--- -----------------------------------------------------
-CREATE TABLE Schedule (
-    schedule_id INT AUTO_INCREMENT PRIMARY KEY,
-    offered_course_id INT,
-    section_id INT,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('lecture', 'section', 'exam')),
-    day_of_week VARCHAR(10) NOT NULL CHECK (day_of_week IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')),
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    location VARCHAR(100),
-    room_id INT NULL,
-    FOREIGN KEY (offered_course_id) REFERENCES OfferedCourse(offered_course_id)
-        ON DELETE NO ACTION
-        ON UPDATE NO ACTION,
-    FOREIGN KEY (section_id) REFERENCES Section(section_id)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    FOREIGN KEY (room_id) REFERENCES Rooms(room_id)
-        ON DELETE SET NULL
-        ON UPDATE NO ACTION,
-    CHECK (offered_course_id IS NOT NULL OR section_id IS NOT NULL)
-) ENGINE=InnoDB;
-
-CREATE INDEX idx_schedule_room ON Schedule(room_id);
-
-CREATE TABLE ScheduleAttributes (
-    attribute_id INT AUTO_INCREMENT PRIMARY KEY,
-    attribute_name VARCHAR(255) NOT NULL UNIQUE,
-    value_type VARCHAR(20) NOT NULL DEFAULT 'text' -- 'text','bool','json'
-) ENGINE=InnoDB;
-
-CREATE TABLE ScheduleAttributeValues (
-    sav_id INT AUTO_INCREMENT PRIMARY KEY,
-    schedule_id INT NOT NULL,
-    attribute_id INT NOT NULL,
-    value TEXT,
-    FOREIGN KEY (schedule_id) REFERENCES Schedule(schedule_id)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    FOREIGN KEY (attribute_id) REFERENCES ScheduleAttributes(attribute_id)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    UNIQUE(schedule_id, attribute_id)
-) ENGINE=InnoDB;
-
--- Example Schedule Attributes to insert:
--- 'zoom_link' (text), 'meeting_id' (text), 'meeting_password' (text),
--- 'recurrence_pattern' (text: 'weekly', 'bi-weekly', 'monthly'),
--- 'is_online' (bool), 'timezone' (text), 'room_requirements_json' (json),
--- 'special_notes' (text), 'exception_dates_json' (json)
+-- Room attributes are created dynamically as needed through the RoomController API
 
 -- -----------------------------------------------------
 -- 2.5 Assignment EAV Model
 -- -----------------------------------------------------
 -- WHY EAV: Assignments have variable settings:
 -- - Submission policies: late_submission_allowed, late_penalty, max_attempts
--- - Group settings: group_size, group_formation_method
--- - Grading: auto_grade_enabled, rubric_json, plagiarism_check
--- - File restrictions: allowed_file_types, max_file_size
+-- - Grading: plagiarism_check_enabled
+-- - File restrictions: allowed_file_types, file_size_limit_mb
 -- EAV allows flexible assignment configuration without schema changes.
 -- 
 -- Base table stores: course reference, title, description, due_date, max_grade
 -- EAV stores: late_submission_allowed, late_penalty_percent, max_attempts,
---             group_size, plagiarism_check_enabled, auto_grade_enabled,
---             rubric_json, allowed_file_types, file_size_limit
+--             plagiarism_check_enabled, allowed_file_types, file_size_limit_mb
 -- -----------------------------------------------------
 CREATE TABLE Assignment (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -659,7 +557,7 @@ CREATE TABLE AssignmentAttributeValues (
 -- EAV allows flexible quiz configuration without schema changes.
 -- 
 -- Base table stores: course reference, title, description, due_date, max_grade
--- EAV stores: time_limit_minutes, max_attempts, randomize_questions,
+-- EAV stores: time_limit_minutes, max_attempts, randomize_questions, randomize_options,
 --             show_results_immediately, show_correct_answers,
 --             show_feedback_after, attempt_penalty_percent
 -- -----------------------------------------------------
@@ -699,17 +597,17 @@ CREATE TABLE QuizAttributeValues (
     UNIQUE(quiz_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Quiz Attributes to insert:
+-- Quiz Attributes (initialized by backend, stored in EAV):
 -- 'time_limit_minutes' (int), 'max_attempts' (int),
 -- 'randomize_questions' (bool), 'randomize_options' (bool),
 -- 'show_results_immediately' (bool), 'show_correct_answers' (bool),
 -- 'show_feedback_after' (text: 'immediately', 'after_submission', 'after_due_date'),
--- 'attempt_penalty_percent' (decimal), 'question_order_json' (json)
+-- 'attempt_penalty_percent' (decimal)
 
 -- -----------------------------------------------------
--- 2.6.1 Submission Tables (Fixed Schema - Moved here after Assignment/Quiz)
+-- 2.6.1 Assignment Submission Table (Fixed Schema - Moved here after Assignment)
 -- -----------------------------------------------------
--- These tables reference Assignment and Quiz, so they must be created after them
+-- This table references Assignment, so it must be created after it
 CREATE TABLE AssignmentSubmission (
     submission_id INT AUTO_INCREMENT PRIMARY KEY,
     assignment_id INT NOT NULL,
@@ -729,23 +627,6 @@ CREATE TABLE AssignmentSubmission (
     UNIQUE(assignment_id, student_id)
 ) ENGINE=InnoDB;
 
-CREATE TABLE QuizSubmission (
-    quiz_sub_id INT AUTO_INCREMENT PRIMARY KEY,
-    quiz_id INT NOT NULL,
-    student_id INT NOT NULL,
-    submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    content TEXT,
-    file_path VARCHAR(1024),
-    grade DECIMAL(7, 2),
-    FOREIGN KEY (quiz_id) REFERENCES Quiz(quiz_id)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    FOREIGN KEY (student_id) REFERENCES Student(student_id)
-        ON DELETE CASCADE
-        ON UPDATE NO ACTION,
-    UNIQUE(quiz_id, student_id)
-) ENGINE=InnoDB;
-
 -- -----------------------------------------------------
 -- 2.7.1 Room Reservations/Bookings
 -- -----------------------------------------------------
@@ -754,7 +635,6 @@ CREATE TABLE RoomReservation (
     room_id INT NOT NULL,
     reserved_by_user_id INT NOT NULL,
     assignment_type VARCHAR(20) NOT NULL CHECK (assignment_type IN ('course', 'instructor', 'department', 'event', 'exam', 'maintenance')),
-    related_schedule_id INT NULL,
     related_offered_course_id INT NULL,
     related_section_id INT NULL,
     related_department_id INT NULL,
@@ -776,9 +656,6 @@ CREATE TABLE RoomReservation (
         ON UPDATE NO ACTION,
     FOREIGN KEY (reserved_by_user_id) REFERENCES `User`(user_id)
         ON DELETE NO ACTION
-        ON UPDATE NO ACTION,
-    FOREIGN KEY (related_schedule_id) REFERENCES Schedule(schedule_id)
-        ON DELETE SET NULL
         ON UPDATE NO ACTION,
     FOREIGN KEY (related_offered_course_id) REFERENCES OfferedCourse(offered_course_id)
         ON DELETE SET NULL
@@ -890,12 +767,12 @@ CREATE TABLE QuestionAttributeValues (
     UNIQUE(question_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Question Attributes to insert:
--- 'question_type' (text: 'MCQ', 'SHORT_TEXT', 'FILE_UPLOAD', 'CODE', 'ESSAY', 'TRUE_FALSE'),
--- 'mcq_option_1' through 'mcq_option_5' (text), 'correct_answer' (text),
--- 'max_marks' (decimal), 'allowed_file_types' (text/json),
--- 'file_size_limit_mb' (int), 'code_language' (text),
--- 'test_cases_json' (json), 'rubric_json' (json)
+-- Core Question Attributes (initialized by QuestionService):
+-- 'question_type' (text: 'MCQ', 'SHORT_TEXT', 'TRUE_FALSE')
+-- 'mcq_options' (json) - JSON array of options for MCQ
+-- 'correct_answer' (text)
+-- 'max_marks' (decimal)
+-- Additional attributes can be created dynamically as needed
 
 -- -----------------------------------------------------
 -- 2.9 Student Answers EAV Model (Already EAV)
@@ -943,10 +820,11 @@ CREATE TABLE StudentAnswerAttributeValues (
     UNIQUE(student_answer_id, sa_attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Student Answer Attributes to insert:
--- 'mcq_selected_option' (text), 'short_text_answer' (text),
--- 'file_path' (text), 'file_name' (text), 'code_submission' (text),
--- 'runtime_output_json' (json), 'execution_time_ms' (int)
+-- Core Student Answer Attributes (initialized by StudentAnswerService):
+-- 'mcq_selected_option' (text)
+-- 'short_text_answer' (text)
+-- 'true_false_answer' (text)
+-- Additional attributes can be created dynamically as needed
 
 -- -----------------------------------------------------
 -- 2.10 Announcement EAV Model (Unified for Admin & Instructor)
@@ -995,20 +873,23 @@ CREATE TABLE AnnouncementAttributeValues (
     UNIQUE(announcement_id, attribute_id)
 ) ENGINE=InnoDB;
 
--- Example Announcement Attributes to insert:
--- 'scope_type' (text: 'course', 'global') - Determines if course-specific or system-wide
--- 'offered_course_id' (int) - For course announcements, links to OfferedCourse
--- 'section_id' (int) - Optional, for section-specific announcements
--- 'announcement_type' (text: 'all_users', 'students_only', 'instructors_only', 'admins_only', 'parents_only')
--- 'priority' (text: 'low', 'medium', 'high', 'urgent')
--- 'is_active' (bool) - Enable/disable announcement
--- 'expires_at' (datetime) - Optional expiration date
--- 'tags_json' (json) - Tags for categorization
--- 'attachments_json' (json) - File attachments
--- 'read_receipt_required' (bool) - Require read confirmation
--- 'pinned' (bool) - Pin to top
--- 'notification_sent' (bool) - Track if notification was sent
--- 'target_departments_json' (json) - Optional department filtering
--- 'target_students_json' (json) - Optional specific student targeting
+-- Announcement attributes are created dynamically as needed through the AnnouncementController API
+
+-- =================================================================
+-- NOTE: EAV ATTRIBUTE INITIALIZATION
+-- =================================================================
+-- EAV attributes for all entities are automatically initialized by the backend code:
+-- 
+-- - AssignmentAttributes: Initialized by EAVService.initializeAssignmentAttributes()
+-- - QuizAttributes: Initialized by EAVService.initializeQuizAttributes()
+-- - CourseMaterialAttributes: Initialized by CourseMaterialService.initializeDefaultAttributes()
+-- - QuestionAttributes: Initialized by QuestionService.initializeDefaultAttributes()
+-- - StudentAnswerAttributes: Initialized by StudentAnswerService.initializeDefaultAttributes()
+-- - EnrollmentAttributes, GradeAttributes, AnnouncementAttributes, RoomAttributes:
+--   These are created dynamically as needed through their respective controllers/services
+--
+-- No manual INSERT statements are required. The backend services handle all attribute
+-- initialization automatically when they are first used.
+-- =================================================================
 
 -- End of schema
